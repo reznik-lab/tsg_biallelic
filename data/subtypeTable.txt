@@ -1,0 +1,97 @@
+"ONCOTREE_CODE"	"organ"	"organ_order"	"CTD_ABBR"	"organ_color"	"Disease"	"CANCER_TYPE_DETAILED"	"n"
+"1"	"ACC"	"Endocrine"	4	"Adrenocortical"	"#e4e07a"	"Adrenocortical Carcinoma"	"Adrenocortical Carcinoma"	63
+"2"	"ACRM"	"Skin"	11	"Acral"	"#4EBE03"	"Acral Melanoma"	"Acral Melanoma"	64
+"3"	"ACYC"	"Head and Neck"	3	"Adenoid Cystic"	"#049347"	"Adenoid Cystic Carcinoma"	"Adenoid Cystic Carcinoma"	125
+"4"	"ANGS"	"Soft Tissue"	12	"Angiosarcoma"	"#00a89b"	"Angiosarcoma"	"Angiosarcoma"	60
+"5"	"ANSC"	"Core GI"	7	"Anal Squam."	"#007EB5"	"Anal Squamous Cell Carcinoma"	"Anal Squamous Cell Carcinoma"	90
+"6"	"ARMM"	"Core GI"	7	"Anorectal Mucosal Mel."	"#007EB5"	"Anorectal Mucosal Melanoma"	"Anorectal Mucosal Melanoma"	66
+"7"	"ASTR"	"Brain"	1	"Astrocytoma"	"#C62D28"	"Astrocytoma"	"Astrocytoma"	254
+"8"	"BLCA"	"Genitourinary"	9	"Bladder Urothelial"	"#f17d81"	"Bladder Urothelial Carcinoma"	"Bladder Urothelial Carcinoma"	873
+"9"	"CCOV"	"Gynecologic"	10	"Clear Cell Ovarian"	"#f8b74a"	"Clear Cell Ovarian Cancer"	"Clear Cell Ovarian Cancer"	92
+"10"	"CCRCC"	"Genitourinary"	9	"Renal Clear Cell"	"#f17d81"	"Renal Clear Cell Carcinoma"	"Renal Clear Cell Carcinoma"	398
+"11"	"CESC"	"Gynecologic"	10	"Cervial Squamous"	"#f8b74a"	"Cervical Squamous Cell Carcinoma"	"Cervical Squamous Cell Carcinoma"	94
+"12"	"CHDM"	"Soft Tissue"	12	"Chondroma"	"#00a89b"	"Chordoma"	"Chordoma"	43
+"13"	"CHRCC"	"Genitourinary"	9	"Chromophobe Renal"	"#f17d81"	"Chromophobe Renal Cell Carcinoma"	"Chromophobe Renal Cell Carcinoma"	45
+"14"	"CHS"	"Soft Tissue"	12	"Chondrosarcoma"	"#00a89b"	"Chondrosarcoma"	"Chondrosarcoma"	36
+"15"	"COAD"	"Core GI"	7	"Colon"	"#007EB5"	"Colon Adenocarcinoma"	"Colon Adenocarcinoma"	2156
+"16"	"CSCC"	"Skin"	11	"Cutaneous Squamous Cell"	"#4EBE03"	"Cutaneous Squamous Cell Carcinoma"	"Cutaneous Squamous Cell Carcinoma"	60
+"17"	"DDLS"	"Soft Tissue"	12	"Dediff. Liposarcoma"	"#00a89b"	"Dedifferentiated Liposarcoma"	"Dedifferentiated Liposarcoma"	144
+"18"	"DSRCT"	"Soft Tissue"	12	"Desmoplastic Small-Round"	"#00a89b"	"Desmoplastic Small-Round-Cell Tumor"	"Desmoplastic Small-Round-Cell Tumor"	64
+"19"	"ECAD"	"Gynecologic"	10	"Endocervical Adeno."	"#f8b74a"	"Endocervical Adenocarcinoma"	"Endocervical Adenocarcinoma"	54
+"20"	"EHCH"	"Developmental GI Tract"	8	"Extrahepatic Chol."	"#355A91"	"Extrahepatic Cholangiocarcinoma"	"Extrahepatic Cholangiocarcinoma"	48
+"21"	"EOV"	"Gynecologic"	10	"Endometroid Ovarian"	"#f8b74a"	"Endometrioid Ovarian Cancer"	"Endometrioid Ovarian Cancer"	59
+"22"	"ERMS"	"Soft Tissue"	12	"Embryonal Rhabdo."	"#00a89b"	"Embryonal Rhabdomyosarcoma"	"Embryonal Rhabdomyosarcoma"	52
+"23"	"ES"	"Soft Tissue"	12	"Ewing"	"#00a89b"	"Ewing Sarcoma"	"Ewing Sarcoma"	90
+"24"	"ESCA"	"Core GI"	7	"Esophageal Adeno."	"#007EB5"	"Esophageal Adenocarcinoma"	"Esophageal Adenocarcinoma"	273
+"25"	"ESCC"	"Core GI"	7	"Esophageal Squam."	"#007EB5"	"Esophageal Squamous Cell Carcinoma"	"Esophageal Squamous Cell Carcinoma"	76
+"26"	"GB"	"Brain"	1	"GB"	"#C62D28"	"Glioblastoma"	"Glioblastoma"	1087
+"27"	"GBAD"	"Developmental GI Tract"	8	"Gallbladder Adeno."	"#355A91"	"Gallbladder Adenocarcinoma, NOS"	"Gallbladder Adenocarcinoma, NOS"	35
+"28"	"GCCAP"	"Core GI"	7	"Globlet Cell Adeno. of Appendix"	"#007EB5"	"Goblet Cell Adenocarcinoma of the Appendix"	"Goblet Cell Adenocarcinoma of the Appendix"	19
+"29"	"GEJ"	"Core GI"	7	"Adeno. of GEJ"	"#007EB5"	"Adenocarcinoma of the Gastroesophageal Junction"	"Adenocarcinoma of the Gastroesophageal Junction"	138
+"30"	"GIST"	"Core GI"	7	"GIST"	"#007EB5"	"Gastrointestinal Stromal Tumor"	"Gastrointestinal Stromal Tumor"	448
+"31"	"GRCT"	"Gynecologic"	10	"Granulosa Cell"	"#f8b74a"	"Granulosa Cell Tumor"	"Granulosa Cell Tumor"	30
+"32"	"HCC"	"Developmental GI Tract"	8	"Hepatocellular"	"#355A91"	"Hepatocellular Carcinoma"	"Hepatocellular Carcinoma"	184
+"33"	"HGNEC"	"Core GI"	7	"High-Grade Neuro. - Colon/Rectum"	"#007EB5"	"High-Grade Neuroendocrine Carcinoma of the Colon and Rectum"	"High-Grade Neuroendocrine Carcinoma of the Colon and Rectum"	43
+"34"	"HGSFT"	"Gynecologic"	10	"High-Grade Serous Fallopian"	"#f8b74a"	"High-Grade Serous Fallopian Tube Cancer"	"High-Grade Serous Fallopian Tube Cancer"	49
+"35"	"HGSOC"	"Gynecologic"	10	"High-Grade Serous Ovarian"	"#f8b74a"	"High-Grade Serous Ovarian Cancer"	"High-Grade Serous Ovarian Cancer"	1001
+"36"	"IDC"	"Breast"	6	"Ductal"	"#e6308e"	"Breast Invasive Ductal Carcinoma"	"Breast Invasive Ductal Carcinoma"	2601
+"37"	"IHCH"	"Developmental GI Tract"	8	"Intrahepatic Chol."	"#355A91"	"Intrahepatic Cholangiocarcinoma"	"Intrahepatic Cholangiocarcinoma"	294
+"38"	"ILC"	"Breast"	6	"Lobular"	"#e6308e"	"Breast Invasive Lobular Carcinoma"	"Breast Invasive Lobular Carcinoma"	389
+"39"	"LGSOC"	"Gynecologic"	10	"Low-Grade Serous"	"#f8b74a"	"Low-Grade Serous Ovarian Cancer"	"Low-Grade Serous Ovarian Cancer"	84
+"40"	"LMS"	"Soft Tissue"	12	"Leiomyosarcoma"	"#00a89b"	"Leiomyosarcoma"	"Leiomyosarcoma"	194
+"41"	"LUAD"	"Thoracic"	5	"Lung Adeno."	"#B368D9"	"Lung Adenocarcinoma"	"Lung Adenocarcinoma"	2333
+"42"	"LUCA"	"Thoracic"	5	"Carcinoid"	"#B368D9"	"Lung Carcinoid"	"Lung Carcinoid"	48
+"43"	"LUNE"	"Thoracic"	5	"Neuroendocrine"	"#B368D9"	"Large Cell Neuroendocrine Carcinoma"	"Large Cell Neuroendocrine Carcinoma"	77
+"44"	"LUSC"	"Thoracic"	5	"Lung Squam."	"#B368D9"	"Lung Squamous Cell Carcinoma"	"Lung Squamous Cell Carcinoma"	422
+"45"	"MAAP"	"Core GI"	7	"Muc. Adeno. of Appendix"	"#007EB5"	"Mucinous Adenocarcinoma of the Appendix"	"Mucinous Adenocarcinoma of the Appendix"	35
+"46"	"MACR"	"Core GI"	7	"Muc. Adeno. - Colon/Rectum"	"#007EB5"	"Mucinous Adenocarcinoma of the Colon and Rectum"	"Mucinous Adenocarcinoma of the Colon and Rectum"	48
+"47"	"MCC"	"Skin"	11	"Merkel Cell"	"#4EBE03"	"Merkel Cell Carcinoma"	"Merkel Cell Carcinoma"	88
+"48"	"MDLC"	"Breast"	6	"Mixed"	"#e6308e"	"Breast Mixed Ductal and Lobular Carcinoma"	"Breast Mixed Ductal and Lobular Carcinoma"	64
+"49"	"MFH"	"Soft Tissue"	12	"Undiff. Pleomorphic Sarc."	"#00a89b"	"Undifferentiated Pleomorphic Sarcoma/Malignant Fibrous Histiocytoma/High-Grade Spindle Cell Sarcoma"	"Undifferentiated Pleomorphic Sarcoma/Malignant Fibrous Histiocytoma/High-Grade Spindle Cell Sarcoma"	157
+"50"	"MFS"	"Soft Tissue"	12	"Myxofibrosarcoma"	"#00a89b"	"Myxofibrosarcoma"	"Myxofibrosarcoma"	52
+"51"	"MGCT"	"Genitourinary"	9	"Mixed Germ Cell"	"#f17d81"	"Mixed Germ Cell Tumor"	"Mixed Germ Cell Tumor"	119
+"52"	"MNG"	"Brain"	1	"Meningioma"	"#C62D28"	"Meningioma"	"Meningioma"	51
+"53"	"MPNST"	"Brain"	1	"Nerve Sheath"	"#C62D28"	"Malignant Peripheral Nerve Sheath Tumor"	"Malignant Peripheral Nerve Sheath Tumor"	53
+"54"	"MRLS"	"Soft Tissue"	12	"Myxoid"	"#00a89b"	"Myxoid/Round-Cell Liposarcoma"	"Myxoid/Round-Cell Liposarcoma"	49
+"55"	"NBL"	"Brain"	1	"Neuroblastoma"	"#C62D28"	"Neuroblastoma"	"Neuroblastoma"	214
+"56"	"NSCLCPD"	"Thoracic"	5	"Poorly Diff."	"#B368D9"	"Poorly Differentiated Non-Small Cell Lung Cancer"	"Poorly Differentiated Non-Small Cell Lung Cancer"	46
+"57"	"OCS"	"Gynecologic"	10	"Uterine Mixed Mesodermal"	"#f8b74a"	"Ovarian Carcinosarcoma/Malignant Mixed Mesodermal Tumor"	"Ovarian Carcinosarcoma/Malignant Mixed Mesodermal Tumor"	64
+"58"	"OCSC"	"Head and Neck"	3	"Oral Cavity"	"#049347"	"Oral Cavity Squamous Cell Carcinoma"	"Oral Cavity Squamous Cell Carcinoma"	84
+"59"	"ODG"	"Brain"	1	"Oligodendro."	"#C62D28"	"Oligodendroglioma"	"Oligodendroglioma"	150
+"60"	"OPHSC"	"Head and Neck"	3	"Oropharynx"	"#049347"	"Oropharynx Squamous Cell Carcinoma"	"Oropharynx Squamous Cell Carcinoma"	86
+"61"	"OS"	"Soft Tissue"	12	"Osteosarcoma"	"#00a89b"	"Osteosarcoma"	"Osteosarcoma"	144
+"62"	"PAAD"	"Developmental GI Tract"	8	"Pancreatic Adeno."	"#355A91"	"Pancreatic Adenocarcinoma"	"Pancreatic Adenocarcinoma"	1042
+"63"	"PANET"	"Developmental GI Tract"	8	"Pancreatic Neuro."	"#355A91"	"Pancreatic Neuroendocrine Tumor"	"Pancreatic Neuroendocrine Tumor"	217
+"64"	"PEMESO"	"Thoracic"	5	"Peritoneal Meso."	"#B368D9"	"Peritoneal Mesothelioma"	"Peritoneal Mesothelioma"	45
+"65"	"PLEMESO"	"Thoracic"	5	"Pleural Meso."	"#B368D9"	"Pleural Mesothelioma, Epithelioid Type"	"Pleural Mesothelioma, Epithelioid Type"	103
+"66"	"PRAD"	"Genitourinary"	9	"Prostate Adeno."	"#f17d81"	"Prostate Adenocarcinoma"	"Prostate Adenocarcinoma"	1619
+"67"	"PRCC"	"Genitourinary"	9	"Papillary Renal Cell"	"#f17d81"	"Papillary Renal Cell Carcinoma"	"Papillary Renal Cell Carcinoma"	69
+"68"	"PTAD"	"Brain"	1	"Pituitary"	"#C62D28"	"Pituitary Adenoma"	"Pituitary Adenoma"	32
+"69"	"RBL"	"Eye"	2	"Retinoblastoma"	"#7797BF"	"Retinoblastoma"	"Retinoblastoma"	71
+"70"	"READ"	"Core GI"	7	"Rectal"	"#007EB5"	"Rectal Adenocarcinoma"	"Rectal Adenocarcinoma"	772
+"71"	"SBC"	"Core GI"	7	"Small Bowel"	"#007EB5"	"Small Bowel Cancer"	"Small Bowel Cancer"	69
+"72"	"SBWDNET"	"Core GI"	7	"Small Bowel Well-Diff Neuro."	"#007EB5"	"Small Bowel Well-Differentiated Neuroendocrine Tumor"	"Small Bowel Well-Differentiated Neuroendocrine Tumor"	47
+"73"	"SCLC"	"Thoracic"	5	"Small Cell"	"#B368D9"	"Small Cell Lung Cancer"	"Small Cell Lung Cancer"	306
+"74"	"SDCA"	"Head and Neck"	3	"Salivary Duct"	"#049347"	"Salivary Duct Carcinoma"	"Salivary Duct Carcinoma"	39
+"75"	"SEM"	"Genitourinary"	9	"Seminoma"	"#f17d81"	"Seminoma"	"Seminoma"	79
+"76"	"SFT"	"Soft Tissue"	12	"Solitary Fibrous"	"#00a89b"	"Solitary Fibrous Tumor/Hemangiopericytoma"	"Solitary Fibrous Tumor/Hemangiopericytoma"	39
+"77"	"SKCM"	"Skin"	11	"Cutaneous"	"#4EBE03"	"Cutaneous Melanoma"	"Cutaneous Melanoma"	496
+"78"	"SPDAC"	"Core GI"	7	"Poorly Diff. Carc. of Stomach"	"#007EB5"	"Poorly Differentiated Carcinoma of the Stomach"	"Poorly Differentiated Carcinoma of the Stomach"	28
+"79"	"STAD"	"Core GI"	7	"Stomach"	"#007EB5"	"Stomach Adenocarcinoma"	"Stomach Adenocarcinoma"	175
+"80"	"SYNS"	"Soft Tissue"	12	"Synovial"	"#00a89b"	"Synovial Sarcoma"	"Synovial Sarcoma"	66
+"81"	"THAP"	"Endocrine"	4	"Anaplastic"	"#e4e07a"	"Anaplastic Thyroid Cancer"	"Anaplastic Thyroid Cancer"	56
+"82"	"THME"	"Endocrine"	4	"Medullary Thyroid"	"#e4e07a"	"Medullary Thyroid Cancer"	"Medullary Thyroid Cancer"	52
+"83"	"THPA"	"Endocrine"	4	"Papillary Thyroid"	"#e4e07a"	"Papillary Thyroid Cancer"	"Papillary Thyroid Cancer"	196
+"84"	"THPD"	"Endocrine"	4	"Poorly Diff. Thyroid"	"#e4e07a"	"Poorly Differentiated Thyroid Cancer"	"Poorly Differentiated Thyroid Cancer"	124
+"85"	"UCCC"	"Gynecologic"	10	"Uterine Clear Cell"	"#f8b74a"	"Uterine Clear Cell Carcinoma"	"Uterine Clear Cell Carcinoma"	42
+"86"	"UCS"	"Gynecologic"	10	"Uterine Mixed Mullerian"	"#f8b74a"	"Uterine Carcinosarcoma/Uterine Malignant Mixed Mullerian Tumor"	"Uterine Carcinosarcoma/Uterine Malignant Mixed Mullerian Tumor"	200
+"87"	"UEC"	"Gynecologic"	10	"Uterine Endometroid"	"#f8b74a"	"Uterine Endometrioid Carcinoma"	"Uterine Endometrioid Carcinoma"	445
+"88"	"ULMS"	"Gynecologic"	10	"Uterline Leiomyo."	"#f8b74a"	"Uterine Leiomyosarcoma"	"Uterine Leiomyosarcoma"	164
+"89"	"UM"	"Skin"	11	"Uveal"	"#4EBE03"	"Uveal Melanoma"	"Uveal Melanoma"	96
+"90"	"UMEC"	"Gynecologic"	10	"Uterine Mixed"	"#f8b74a"	"Uterine Mixed Endometrial Carcinoma"	"Uterine Mixed Endometrial Carcinoma"	69
+"91"	"URCC"	"Genitourinary"	9	"Unclassified Renal"	"#f17d81"	"Unclassified Renal Cell Carcinoma"	"Unclassified Renal Cell Carcinoma"	102
+"92"	"USC"	"Gynecologic"	10	"Uterine Serious"	"#f8b74a"	"Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma"	"Uterine Serous Carcinoma/Uterine Papillary Serous Carcinoma"	227
+"93"	"UTUC"	"Genitourinary"	9	"Upper Tract Urothelial"	"#f17d81"	"Upper Tract Urothelial Carcinoma"	"Upper Tract Urothelial Carcinoma"	157
+"94"	"VMM"	"Skin"	11	"Mucosal Meolanoma"	"#4EBE03"	"Mucosal Melanoma of the Vulva/Vagina"	"Mucosal Melanoma of the Vulva/Vagina"	35
+"95"	"WDLS"	"Soft Tissue"	12	"Well-Diff. Liposarcoma"	"#00a89b"	"Well-Differentiated Liposarcoma"	"Well-Differentiated Liposarcoma"	35
+"96"	"WT"	"Genitourinary"	9	"Wilms"	"#f17d81"	"Wilms' Tumor"	"Wilms' Tumor"	40
