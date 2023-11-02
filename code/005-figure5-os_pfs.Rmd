@@ -39,9 +39,9 @@ library(magrittr)
 
 ```{r}
 
-indir <- "~/OneDrive - Memorial Sloan Kettering Cancer Center/Research/biallelic_tsg/tsg_zygosity/io/data/"
-outdir <- "~/OneDrive - Memorial Sloan Kettering Cancer Center/Research/biallelic_tsg/tsg_zygosity/io/results/"
-source(paste0(indir,"../../os_helper_functions.R"))
+indir <- indir
+outdir <- outdir
+source("os_helper_functions.R")
 
 
 alt_colors <- setNames(c("coral2", "peachpuff", "#7184A1", "#7184A1", 
