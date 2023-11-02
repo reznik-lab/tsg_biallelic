@@ -77,8 +77,7 @@ generateFigure1abc <- function(drivers, drivers.with_fusions, xsize=9, mainsize=
   f1b <- zygosityBarplot(zygosityData=data.with_fusions, colorvec=colorvec, xsize = xsize)
   
   #f1c:
-  f1c <- mechanismBarplot(data=data.with_fusions, geneset=tsgdf$Hugo_Symbol, colorvec=colorvec, mainsize=mainsize, subtypeTable=subtypeTable, xsize = xsize,
-                          filterMutations = 0)
+  f1c <- mechanismBarplot(table_s5, mainsize=mainsize, subtypeTable=subtypeTable, xsize = xsize, filterMutations = 0)
   layout <- 
     "
   ###ACCC
