@@ -67,13 +67,11 @@ mechanismBarplot <- function(table_s5, mainsize=12, subtypeTable, xsize=6){
 }
 
 #Generating figure 1 A, B, C:
-generateFigure1abc <- function(drivers, drivers.with_fusions, xsize=9, mainsize=12, tsgdf, subtypeTable){
+generateFigure1abc <- function(drivers.with_fusions, xsize=9, mainsize=12, tsgdf, subtypeTable){
   #f1a and b:
   colorvec <- c('Amplification'="#D25047",'Mutation'="#CED1CE",'Mutation + Gain of Mutant'="#EDBE59",'Fusion'='plum1','Compound'= "#8CA1D3",'Homdel'="#242860", 
                 'Mut + Fusion'="#9E65AA",'Mut + LOH'="#58B9F4")
-  data <- drivers
   data.with_fusions <- drivers.with_fusions
-  if('Mut + fusion' %in% data.with_fusions$mechanism){data.with_fusions$mechanism[which(data.with_fusions$mechanism == 'Mut + fusion')] <- 'Mut + Fusion'}
   f1b <- zygosityBarplot(zygosityData=data.with_fusions, colorvec=colorvec, xsize = xsize)
   
   #f1c:
@@ -91,6 +89,5 @@ generateFigure1abc <- function(drivers, drivers.with_fusions, xsize=9, mainsize=
   print(f1abc)
   dev.off()
 }
-generateFigure1abc(drivers.impact, drivers.impact.with_fusions, xsize=10, mainsize=12, tsgdf, subtypeTable=select_ctds)
-
+generateFigure1abc(drivers.impact.with_fusions, xsize=10, mainsize=12, tsgdf, subtypeTable=select_ctds)
 
