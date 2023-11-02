@@ -89,5 +89,4 @@ generateFigure1abc <- function(drivers.with_fusions, xsize=9, mainsize=12, tsgdf
   print(f1abc)
   dev.off()
 }
-generateFigure1abc(drivers.impact.with_fusions, xsize=10, mainsize=12, tsgdf, subtypeTable=select_ctds)
 

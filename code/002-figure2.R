@@ -1,4 +1,4 @@
-biallelicRateTileplot <- function(data, colorvec, subtypeTable, ncolors=4, xsize=14, mainsize=14){
+biallelicRateTileplot <- function(data, subtypeTable, colorvec, ncolors=4, xsize=14, mainsize=14){
   dat <- data
   #% rather than fraction:
   dat$`Biallelic %` <- round(100*(dat$`Biallelic Fraction`))
@@ -39,7 +39,6 @@ biallelicRateTileplot <- function(data, colorvec, subtypeTable, ncolors=4, xsize
   dat$`Alteration %`[which(dat$`Alteration %` == 0)] <- ''
   dat$`Biallelic %`[which(dat$`Alteration %` == 0)] <- 0
   dat$`Biallelic %`[which(dat$Alterations < 4)] <- 0
-  #dat$`Alteration %`[which(dat$Alterations < 4)] <- NA
   dat$`Biallelic %`[which(dat$`Alteration %` == '')] <- 0
   dat$`Alteration %`[which(dat$Num_Alterations < 4 & dat$Num_Alterations > 0 | dat$`Alteration %` == '')] <- ''
   
@@ -153,5 +152,4 @@ generateFigure2 <- function(data, xsize=9, mainsize=12, subtypeTable){
   f2 <- biallelicRateTileplot(data=data, colorvec=colorvec, subtypeTable=subtypeTable)
   f2
 }
-generateFigure2(data, subtypeTable=select_ctds, xsize=10, mainsize=12)
 
