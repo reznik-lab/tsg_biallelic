@@ -71,8 +71,7 @@ generateFigure1abc <- function(drivers.with_fusions, xsize=9, mainsize=12, tsgdf
   #f1a and b:
   colorvec <- c('Amplification'="#D25047",'Mutation'="#CED1CE",'Mutation + Gain of Mutant'="#EDBE59",'Fusion'='plum1','Compound'= "#8CA1D3",'Homdel'="#242860", 
                 'Mut + Fusion'="#9E65AA",'Mut + LOH'="#58B9F4")
-  data.with_fusions <- drivers.with_fusions
-  f1b <- zygosityBarplot(zygosityData=data.with_fusions, colorvec=colorvec, xsize = xsize)
+  f1b <- zygosityBarplot(zygosityData=drivers.with_fusions, colorvec=colorvec, xsize = xsize)
   
   #f1c:
   f1c <- mechanismBarplot(table_s5, mainsize=mainsize, subtypeTable=subtypeTable, xsize = xsize, filterMutations = 0)
