@@ -31,21 +31,21 @@ zygosityBarplot <- function(zygosityData, colorvec, mainsize=12, xsize=6){
 }
 
 #Mechanism barplot (f1c):
-mechanismBarplot <- function(table_s5, mainsize=12, subtypeTable, xsize=6){
+mechanismBarplot <- function(input_table, mainsize=12, subtypeTable, xsize=6){
   #Reformatting table S5 for plot
-  subtype_input <- table_s5[which(table_s5$pvalue.corrected < .05 & table_s5$Total_Biallelic_Events >= 10 & 
-                                    table_s5$Dominant_Mechanism_Pancan != table_s5$preferred_mechanism),]
-  subtype_input <- Reduce(rbind, lapply(c(4:7), function(i){
-    cbind(subtype_input[,c(1,2,9)],'Fraction'=subtype_input[,i],'Mechanism'=strsplit(colnames(subtype_input)[i],'Fraction_')[[1]][2])}))
+  subtype_input_table <- input_table[which(input_table$pvalue.corrected < .05 & input_table$Total_Biallelic_Events >= 10 & 
+                                    input_table$Preferred_Mechanism_Pancan != input_table$Preferred_Mechanism_CancerType),]
+  subtype_input_table <- Reduce(rbind, lapply(c(4:7), function(i){
+    cbind(subtype_input_table[,c(1,2,9)],'Fraction'=subtype_input_table[,i],'Mechanism'=strsplit(colnames(subtype_input_table)[i],'Fraction_')[[1]][2])}))
   #Adding pancancer rows:
-  pancan <- unique(table_s5[which(table_s5$pvalue.corrected < .05 & table_s5$Total_Biallelic_Events >= 10 & 
-                      table_s5$Dominant_Mechanism_Pancan != table_s5$preferred_mechanism),c(2,9,14:17)])
-  pancan_input <- Reduce(rbind, lapply(c(3:6), function(i){cbind('Disease'='Pan-Cancer', pancan[,c(1,2)],'Fraction'=pancan[,i],
+  pancan <- unique(input_table[which(input_table$pvalue.corrected < .05 & input_table$Total_Biallelic_Events >= 10 & 
+                      input_table$Preferred_Mechanism_Pancan != input_table$Preferred_Mechanism_CancerType),c(2,9,13:16)])
+  pancan_input_table <- Reduce(rbind, lapply(c(3:6), function(i){cbind('Disease'='Pan-Cancer', pancan[,c(1,2)],'Fraction'=pancan[,i],
                                                                  'Mechanism'=strsplit(colnames(pancan)[i],"Fraction_")[[1]][2])}))
-  pancan_input$pvalue.corrected <- NA
-  pancan_input <- unique(pancan_input)
-  pancan_input$Mechanism <- str_split_fixed(pancan_input$Mechanism, " ", 2)[,1]
-  df <- rbind(subtype_input, pancan_input)
+  pancan_input_table$pvalue.corrected <- NA
+  pancan_input_table <- unique(pancan_input_table)
+  pancan_input_table$Mechanism <- str_split_fixed(pancan_input_table$Mechanism, " ", 2)[,1]
+  df <- rbind(subtype_input_table, pancan_input_table)
   #Only plotting significant:
   #x axis
   df$abbrev <- subtypeTable$ONCOTREE_CODE[match(df$Disease, subtypeTable$CANCER_TYPE_DETAILED)]
@@ -66,26 +66,24 @@ mechanismBarplot <- function(table_s5, mainsize=12, subtypeTable, xsize=6){
   p
 }
 
-#Generating figure 1 A, B, C:
-generateFigure1abc <- function(drivers.with_fusions, xsize=9, mainsize=12, tsgdf, subtypeTable){
+#Generating figure 1 B, C:
+#input_table to mechanismBarplot is table_s5.
+generateFigure1 <- function(drivers.with_fusions, input_table, xsize=9, mainsize=12, subtypeTable){
   #f1a and b:
   colorvec <- c('Amplification'="#D25047",'Mutation'="#CED1CE",'Mutation + Gain of Mutant'="#EDBE59",'Fusion'='plum1','Compound'= "#8CA1D3",'Homdel'="#242860", 
                 'Mut + Fusion'="#9E65AA",'Mut + LOH'="#58B9F4")
   f1b <- zygosityBarplot(zygosityData=drivers.with_fusions, colorvec=colorvec, xsize = xsize)
   
   #f1c:
-  f1c <- mechanismBarplot(table_s5, mainsize=mainsize, subtypeTable=subtypeTable, xsize = xsize, filterMutations = 0)
+  f1c <- mechanismBarplot(input_table, mainsize=mainsize, subtypeTable=subtypeTable, xsize = xsize)
   layout <- 
     "
-  ###ACCC
+  ###BCCC
   "
   
   f1abc <- f1b + f1c + 
     plot_layout(design = layout, heights=c(2.7,9)) + plot_annotation(tag_levels = list(c('B','C')))
   
-  #Save figure:
-  pdf(paste(figurePath,'/f1abc.pdf',sep=''),width = 23.4, height = 7.6)
   print(f1abc)
-  dev.off()
 }
 

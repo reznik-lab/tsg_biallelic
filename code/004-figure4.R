@@ -4,9 +4,11 @@ library(readxl)
 library(stringr)
 library(RColorBrewer)
 library(ggpubr)
-library(DESeq2)
 library(patchwork)
 library(ggrepel)
+
+#Loading a few auxiliary functions needed:
+source('code/auxiliary_functions.R')
 
 generateFigure4a <- function(enrichmentRes, subtypeTable, mainsize=14, textsize=12){
   select_genes_4a = c("APC", "BAP1", "CDH1", "MEN1", "NF1", "NF2", "SMAD4", "STK11")

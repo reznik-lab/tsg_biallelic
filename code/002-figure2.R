@@ -29,9 +29,9 @@ biallelicRateTileplot <- function(data, subtypeTable, colorvec, ncolors=4, xsize
   dat$abbrev_n <- factor(dat$abbrev_n, levels = unique(dat$abbrev_n))
   
   #Making sure other factor levels are in right order:
-  dat$Gene <- factor(dat$Gene, levels = rev(geneOrder))
-  genedf$Hugo_Symbol <- factor(genedf$Hugo_Symbol, levels = rev(geneOrder))
-  mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = rev(geneOrder))
+  dat$Gene <- factor(dat$Gene, levels = levels(mechdf$Hugo_Symbol))
+  genedf$Hugo_Symbol <- factor(genedf$Hugo_Symbol, levels = levels(mechdf$Hugo_Symbol))
+  mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = levels(mechdf$Hugo_Symbol))
   mechdf$Mechanism <- factor(mechdf$Mechanism, levels = c("Mutation","Mutation + Gain of Mutant","Amplification","Compound",
                                                           "Homdel","Mut + Fusion","Mut + LOH"))
   
