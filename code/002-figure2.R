@@ -1,3 +1,11 @@
+library(stringr)
+library(RColorBrewer)
+library(ggplot2)
+library(ggpubr)
+library(plyr)
+library(dplyr)
+library(patchwork)
+
 biallelicRateTileplot <- function(data, subtypeTable, colorvec, ncolors=4, xsize=14, mainsize=14){
   dat <- data
   #% rather than fraction:

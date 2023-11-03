@@ -14,13 +14,6 @@ source('code/auxiliary_functions.R')
 #table_s8 should be used for enrichment_driver_vus
 generateFigure5 <- function(enrichment_driver_vus, keap1_driver_maf, keap1_vus_maf, keap1_mut_tab, expr_res_luad_keap1, 
                             drivers_and_vus.luad, mainsize=15){
-  #Merging drivers and vuses:
-  mutcats <- c('Heterozygous (Mutation)','Biallelic - Mut + LOH','Gain-of-mutant - Mut + copy gain','Biallelic - compound','Biallelic - Mut + fusion')
-  drivers_and_vus <- as.data.frame(rbind(drivers, 
-                           vus %>% 
-                             filter(grepl('Mutation|Biallelic|Gain', zygosity_call)) %>%
-                             filter(!Hugo_Symbol %in% blacklist$Hugo_Symbol)))
-  
   ###Plotting driver enrichment against vus enrichment
   enrdat <- enrichment_driver_vus
   enrdat$Mutations <- enrdat$drivers_num_MutOnly + enrdat$driver_num_MutLOH + enrdat$vus_num_MutOnly + enrdat$vus_num_MutLOH
@@ -45,7 +38,7 @@ generateFigure5 <- function(enrichment_driver_vus, keap1_driver_maf, keap1_vus_m
   
   enrdat <-
     enrdat %>% 
-    left_join(select_ctds %>% select(Disease=CANCER_TYPE_DETAILED, ONCOTREE_CODE)) %>%
+    left_join(subtypeTable %>% select(Disease=CANCER_TYPE_DETAILED, ONCOTREE_CODE)) %>%
     filter(!is.na(ONCOTREE_CODE))
   
   enrdat$vus_OR <- as.numeric(enrdat$vus_OR)
@@ -118,9 +111,12 @@ generateFigure5 <- function(enrichment_driver_vus, keap1_driver_maf, keap1_vus_m
   f5c <- ggarrange(f5ca, f5cb, nrow=2, common.legend = TRUE)
   
   #Expression (RNA and protein) plots:
+  #hugo to ens map for relevant genes:
+  hugo <- expr_res_luad_keap1$res.vus_v_wt$hugo
+  names(hugo) <- rownames(expr_res_luad_keap1$res.vus_v_wt)
   f5d <- expressionBoxplots2(res.vus_v_wt=expr_res_luad_keap1$res.vus_v_wt, res.vus_v_driver=expr_res_luad_keap1$res.vus_v_driver,gene='KEAP1', 
               disease='LUAD', path=NULL, counts = expr_res_luad_keap1$counts, counts.prot=expr_res_luad_keap1$counts.prot, 
-              genes_boxplot=c('NFE2L2','NQO1'), genes_boxplot.prot=c('NRF2','NQO1'))$plots
+              genes_boxplot=c('NFE2L2','NQO1'), genes_boxplot.prot=c('NRF2','NQO1'), hugo = hugo)$plots
   
   #LUAD comutation plot:
   f5e <- mutationBarplot.class(data=drivers_and_vus.luad, gene='KEAP1', disease='Lung Adenocarcinoma',cutoff = .05)

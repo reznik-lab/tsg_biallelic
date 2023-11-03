@@ -84,7 +84,7 @@ expressionBoxplots <- function(counts, annotation=NULL, genes, counts.prot, prot
 
 #VUS vs. Driver expression plots for fig. 5:
 expressionBoxplots2 <- function(res.vus_v_wt, res.vus_v_driver, counts.prot, counts, gene, disease, path,
-                                genes_boxplot, genes_boxplot.prot, geneInTitle=FALSE, mainsize=15){
+                                genes_boxplot, genes_boxplot.prot, geneInTitle=FALSE, mainsize=15, hugo){
   res.vus_v_wt$lab <- res.vus_v_driver$lab <- ''
   labelled <- gene
   res.vus_v_wt$lab[which(res.vus_v_wt$hugo %in% labelled)] <- res.vus_v_wt$hugo[which(res.vus_v_wt$hugo %in% labelled)]

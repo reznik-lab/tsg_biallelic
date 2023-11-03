@@ -1,4 +1,3 @@
-
 library(ggplot2)
 library(patchwork)
 library(stringr)
@@ -6,9 +5,9 @@ library(ggnewscale)
 library(RColorBrewer)
 library(ggtext)
 library(binom)
+library(tidyr)
 
-generateFigure3 <- function(enrichmentRes, tsgdf_all, subtypeTable, clinicalData, mainsize=12, borders=TRUE){-
-  dat <- drivers
+generateFigure3 <- function(enrichmentRes, subtypeTable, clinicalData, mainsize=12, borders=TRUE){-
 
   ### gene selection criteria for figure 3: if it is significant in at least one cancertype, or if it is
   select_genes_to_plot_fig3 <-
@@ -218,7 +217,7 @@ generateFigure3 <- function(enrichmentRes, tsgdf_all, subtypeTable, clinicalData
   dev.off()
   
 }
-generateFigure3(enrichmentRes, clinicalData=clinData.filtered, mainsize=15)
+#generateFigure3(enrichmentRes, subtypeTable, clinicalData=clinData.filtered, mainsize=15)
 
 
 

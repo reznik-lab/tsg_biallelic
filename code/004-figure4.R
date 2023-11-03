@@ -12,15 +12,16 @@ source('code/auxiliary_functions.R')
 
 generateFigure4a <- function(enrichmentRes, subtypeTable, mainsize=14, textsize=12){
   select_genes_4a = c("APC", "BAP1", "CDH1", "MEN1", "NF1", "NF2", "SMAD4", "STK11")
-  if(is.null(enrichmentRes$ONCOTREE_CODE)){enrichmentRes$ONCOTREE_CODE <- subtypeTable$ONCOTREE_CODE[match(enrichmentRes$Disease, subtypeTable$CANCER_TYPE_DETAILED)]}
-  enrichmentRes$alt_rate <- (enrichmentRes$Num_MutLOH + enrichmentRes$Num_Mut_only)/enrichmentRes$N
-  colnames(enrichmentRes)[which(colnames(enrichmentRes) == 'mut_fraction')] <- 'alt_rate'
-  colnames(enrichmentRes)[which(colnames(enrichmentRes) == 'gene')] <- 'Gene'
-  colnames(enrichmentRes)[which(colnames(enrichmentRes) == 'disease')] <- 'Disease'
-  enrichmentRes$neg_log10_p_value <- -log10(enrichmentRes$p_value_corrected)
+  enr <- enrichmentRes
+  if(is.null(enr$ONCOTREE_CODE)){enr$ONCOTREE_CODE <- subtypeTable$ONCOTREE_CODE[match(enr$Disease, subtypeTable$CANCER_TYPE_DETAILED)]}
+  colnames(enr)[which(colnames(enr) == 'mut_fraction')] <- 'alt_rate'
+  colnames(enr)[which(colnames(enr) == 'gene')] <- 'Gene'
+  colnames(enr)[which(colnames(enr) == 'disease')] <- 'Disease'
+  enr$p_value_corrected <- as.numeric(enr$p_value_corrected)
+  enr$neg_log10_p_value <- -log10(enr$p_value_corrected)
 
   d4a <- 
-    enrichmentRes %>% 
+    enr %>% 
     mutate(gene = Gene, disease = Disease) %>% 
     filter(gene %in% select_genes_4a) %>% 
     mutate(display_text = paste0(Gene, ' - ', ONCOTREE_CODE),
@@ -150,8 +151,11 @@ generateFigure4 <- function(apc_mut_tab, enrichmentRes, expr_res_luad_apc, subty
             annotate_figure(ggarrange(p3, p4, ncol=2), top = text_grob("PRAD", size = 20)), ncol=2)
   
   #Expression (RNA and protein) boxplot for APC-associated genes:
+  #hugo to ens map for relevant genes:
+  hugo <- expr_res_luad_apc$res$hugo
+  names(hugo) <- rownames(expr_res_luad_apc$res)
   f4c <- expressionBoxplots(expr_res_luad_apc$counts, annotation=expr_res_luad_apc$columnData$category, genes=c('CTNNB1'), 
-                            counts.prot=expr_res_luad_apc$counts.prot, 
+                            counts.prot=expr_res_luad_apc$counts.prot, hugo = hugo,
         proteins=c('BETACATENIN'), hugo,textsize=12, levels=c('a_wt_wt','b_het_wt','c_wt_mut','d_biallelic_wt'), 
         levelNames = c('APC-WT/CTNNB1-WT','APC-Het/CTNNB1-WT','APC-WT/CTNNB1-Mut','APC-Biallelic/CTNNB1-WT'), remove=NULL)
 
@@ -163,6 +167,6 @@ generateFigure4 <- function(apc_mut_tab, enrichmentRes, expr_res_luad_apc, subty
   "
   f4 <- f4a + f4b + f4c  + 
     plot_layout(design = layout, widths = c(4,3,3)) + plot_annotation(tag_levels = 'A')
-  print(f4)
+  f4
 }
 
