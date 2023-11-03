@@ -113,7 +113,7 @@ generateFigure4a <- function(enrichmentRes, subtypeTable, mainsize=14, textsize=
 }
 
 #Figure 3: Rare TSGs:
-generateFigure4 <- function(apc_mut_tab, enrichmentRes, expr.res.luad, subtypeTable, mainsize=15, textsize=14){
+generateFigure4 <- function(apc_mut_tab, enrichmentRes, expr_res_luad_apc, subtypeTable, mainsize=15, textsize=14){
   #f4a:
   ###Selection vs. mut. rate:
   f4a <- generateFigure4a(enrichmentRes=enrichmentRes, subtypeTable = subtypeTable, mainsize=14, textsize=12)
@@ -148,7 +148,8 @@ generateFigure4 <- function(apc_mut_tab, enrichmentRes, expr.res.luad, subtypeTa
             annotate_figure(ggarrange(p3, p4, ncol=2), top = text_grob("PRAD", size = 20)), ncol=2)
   
   #Expression (RNA and protein) boxplot for APC-associated genes:
-  f4c <- expressionBoxplots(expr.res.luad$counts, annotation=expr.res.luad$columnData$category, genes=c('CTNNB1'), counts.prot=expr.res.luad$counts.prot, 
+  f4c <- expressionBoxplots(expr_res_luad_apc$counts, annotation=expr_res_luad_apc$columnData$category, genes=c('CTNNB1'), 
+                            counts.prot=expr_res_luad_apc$counts.prot, 
         proteins=c('BETACATENIN'), hugo,textsize=12, levels=c('a_wt_wt','b_het_wt','c_wt_mut','d_biallelic_wt'), 
         levelNames = c('APC-WT/CTNNB1-WT','APC-Het/CTNNB1-WT','APC-WT/CTNNB1-Mut','APC-Biallelic/CTNNB1-WT'), remove=NULL)
 
