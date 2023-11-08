@@ -6,8 +6,10 @@ library(RColorBrewer)
 library(ggtext)
 library(binom)
 library(tidyr)
+library(dplyr)
+library(plyr)
 
-generateFigure3 <- function(enrichmentRes, subtypeTable, clinicalData, mainsize=12, borders=TRUE){-
+generateFigure3 <- function(enrichmentRes, subtypeTable, clinicalData, mainsize=12, borders=TRUE){
 
   ### gene selection criteria for figure 3: if it is significant in at least one cancertype, or if it is
   select_genes_to_plot_fig3 <-
@@ -105,11 +107,10 @@ generateFigure3 <- function(enrichmentRes, subtypeTable, clinicalData, mainsize=
     select(gene, disease, fig2_alterations_N, fig2_biallelic_rate = overall_biallelic_rate, fig3_mutations_N, fig3_biallelic_rate, p_value_corrected) %>% 
     arrange(desc(fig2_alterations_N), 
             desc(fig3_mutations_N)) %>% 
-    data.frame 
-  filter(fig2_alterations_N >= 20 | fig3_mutations_N >=20) %>% 
-    arrange(gene)
-  
-  
+    #data.frame
+    filter(fig2_alterations_N >= 20 | fig3_mutations_N >=20) %>%
+      arrange(gene)
+
   
   fig3_data_summary <-
     fig3_data %>%
@@ -210,14 +211,14 @@ generateFigure3 <- function(enrichmentRes, subtypeTable, clinicalData, mainsize=
     ) +
     xlab("") +
     ylab("")  + coord_flip()
-  
-  pdf("./fig3.pdf", width=15, height=16)
-  fig3_gene_x_ctd_plot + fig3_barplot + fig3_barplot2 + 
-    plot_layout(widths = c(8,0.6, 0.6), guides = 'collect') + theme(legend.position = 'right')
-  dev.off()
+  fig3_gene_x_ctd_plot
+  #pdf("./fig3.pdf", width=15, height=16)
+  #fig3_gene_x_ctd_plot + fig3_barplot + fig3_barplot2 + 
+  #  plot_layout(widths = c(8,0.6, 0.6), guides = 'collect') + theme(legend.position = 'right')
+  #dev.off()
   
 }
-#generateFigure3(enrichmentRes, subtypeTable, clinicalData=clinData.filtered, mainsize=15)
+generateFigure3(enrichmentRes, subtypeTable, clinicalData=clinData.filtered, mainsize=15)
 
 
 
