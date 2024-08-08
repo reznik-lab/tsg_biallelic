@@ -1,0 +1,352 @@
+---
+title: "OS by zygosity - figures"
+author: "Maria Perry"
+date: "2024-06-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(readr)
+library(tools)
+library(ggrepel)
+library(RColorBrewer)
+library(plotly)
+library(svglite)
+library(data.table)
+library(gridExtra)
+library(rstatix)
+library(ggpubr)
+library(patchwork)
+library(survminer)
+library(survival)
+library(magrittr)
+library(gtable)
+library(grid)
+library(lubridate)
+library(gtsummary)
+set_gtsummary_theme(theme_gtsummary_compact())
+library(ggsurvfit)
+library(colorspace)
+
+```
+
+# Setup
+
+```{r}
+
+alt_colors <- setNames(c("coral2", darken("peachpuff", 0.1), "coral2", darken("peachpuff", 0.1), "gray", "gray",
+                         "dodgerblue4", "lightblue3", "dodgerblue4", "lightblue3", "gray20", "gray20"), 
+                       c("Driver", "VUS", "driver", "vus", "wt", "WT",
+                         "Biallelic", "Monoallelic", "biallelic", "monoallelic", "Altered", "Mutated"))
+
+scales::show_col(unique(alt_colors))
+
+```
+
+```{r}
+
+indir <- "data/"
+outdir <- "results/"
+
+source("helper_functions_tsg.R")
+
+```
+
+# Load data
+
+```{r}
+
+os_mut_class <- fread(file = paste0(outdir, "os_by_mut_class.csv"))
+os_mut_class2 <- fread(file = paste0(outdir, "os_by_mut_class_vus_ref.csv"))
+os_mut_class_alt <- fread(file = paste0(outdir, "os_by_mut_class_alt.csv"))
+
+load(paste0(outdir, "os_mutclass_screen_keap1_luad.Robj"))
+os_by_mut_class <- list()
+os_by_mut_class[["KEAP1_LUAD"]] <- res
+rm(res)
+
+# rbind for supplementary table
+table_s10 <- os_mut_class %>% mutate(model = "mv_WT ref") %>%
+  rbind(os_mut_class2 %>% mutate(model = "mv_VUS ref")) %>%
+  rbind(os_mut_class_alt %>% mutate(model = "mv_altered vs WT"), fill = T) %>%
+  filter(grepl("mutation_class", term)) %>% mutate(term = gsub("mutation_class", "", term)) %>%
+  mutate(term = gsub("_combined", "", term)) %>%
+  select(model, everything())
+
+fwrite(table_s10, paste0(outdir, "Table_S10.csv"), row.names = F)
+
+
+reg_mut_class <- fread(file = paste0(indir, "input/gxb_vus_logistf.csv"))
+
+
+os_zyg <- fread(file = paste0(outdir, "os_by_zyg.csv"))
+os_zyg2 <- fread(file = paste0(outdir, "os_by_zyg_monoallelic_ref.csv"))
+os_zyg_alt <- fread(file = paste0(outdir, "os_by_zyg_alt.csv"))
+
+load(paste0(outdir, "os_zyg_screen_keap1_luad.Robj"))
+os_by_zyg <- list()
+os_by_zyg[["KEAP1_LUAD"]] <- res
+rm(res)
+
+# rbind for supplementary table
+table_s11 <- os_zyg %>% mutate(model = "mv_WT ref") %>%
+  rbind(os_zyg2 %>% mutate(model = "mv_monoallelic ref")) %>%
+  rbind(os_zyg_alt %>% mutate(model = "mv_altered vs WT"), fill = T) %>%
+  filter(grepl("biallelic_label", term)) %>% mutate(term = gsub("biallelic_label", "", term)) %>%
+  mutate(term = gsub("_combined", "", term)) %>%
+  select(model, everything())
+
+fwrite(table_s11, paste0(outdir, "Table_S11.csv"), row.names = F)
+
+```
+
+```{r}
+
+# tidying up term labels
+os_mut_class <- os_mut_class %>%
+  filter(grepl("mutation_class", term)) %>% mutate(term = gsub("mutation_class", "", term))
+
+os_mut_class2 <- os_mut_class2 %>%
+  filter(grepl("mutation_class", term)) %>% mutate(term = gsub("mutation_class", "", term))
+
+os_mut_class_alt <- os_mut_class_alt %>%
+  filter(grepl("mutation_class_combined", term)) %>% mutate(term = gsub("mutation_class_combined", "", term))
+
+os_zyg <- os_zyg %>%
+  filter(grepl("biallelic_label", term)) %>% mutate(term = gsub("biallelic_label", "", term))
+
+os_zyg2 <- os_zyg2 %>%
+  filter(grepl("biallelic_label", term)) %>% mutate(term = gsub("biallelic_label", "", term))
+
+os_zyg_alt <- os_zyg_alt %>%
+  filter(grepl("biallelic_label_combined", term)) %>% mutate(term = gsub("biallelic_label_combined", "", term))
+
+```
+
+# Figures
+
+## Mutation class
+
+Note: highlight genes that had significant positive selection for biallelic inactivation in VUSs (from regression)
+
+### Volcano
+
+```{r}
+
+reg_hits_vus <- reg_mut_class %>%
+  filter(CANCER_TYPE_DETAILED != "all") %>%
+  filter(logistf_qval < 0.05 & logistf_selection_type == "Positive-Sel" & n_mutated >= 10) %>%
+  mutate(combo_gene_type = paste0(Hugo_Symbol, "_", ONCOTREE_CODE)) #
+
+reg_hits_vus
+
+type_colors <- setNames(mskRvis::msk_colors[1:n_distinct(reg_hits_vus$ONCOTREE_CODE)], as.character(unique(reg_hits_vus$ONCOTREE_CODE)))
+
+g_volcano <- os_mut_class %>% 
+  filter(grepl("vus", term)) %>%
+  mutate(hazard_ratio = (estimate),
+         combo = paste0(term, " vs. ", "wt"),
+         combo_gene_type = paste0(gene, "_", cancer_type)) %>%
+  mutate(gene_label = fct_infreq(ifelse(combo_gene_type %in% reg_hits_vus$combo_gene_type, (as.character(gene)), NA)),
+         type_label = fct_infreq(ifelse(combo_gene_type %in% reg_hits_vus$combo_gene_type, (as.character(cancer_type)), NA))) %>%
+         #combo_label = fct_infreq(ifelse(combo_gene_type %in% vus_hits_combos, as.character(combo_gene_type), NA))) %>%
+  mutate(p.adj.signif.label = factor(case_when(p.adj < 0.05 ~ "p.adj < 0.05", p.value < 0.05 ~ "p < 0.05", TRUE ~ "NS"),
+                                     levels = c("p.adj < 0.05", "p < 0.05", "NS"))) %>%
+  mutate(type_label = fct_relevel(type_label, "LUAD")) %>%
+  mutate(across(where(is.factor), fct_drop)) %>% filter(term != "Unknown") %>%
+  ggplot(aes(x = log2(hazard_ratio), y = -log10(p.value), color = type_label)) + 
+  geom_vline(xintercept = 0, linetype = "dotted") + 
+  geom_point(alpha = 0.8, aes(shape = p.adj.signif.label), size =3, stroke = 1) +
+  #geom_text_repel(aes(label = gene_label), size=3, max.overlaps = 20, fontface = "bold") + #, color = "black") + 
+  facet_wrap(~ combo) + 
+  theme_cowplot(12) + 
+  #scale_color_manual(values = type_colors, na.value = "gray80") +
+  mskRvis::scale_color_msk("main", na.value = "gray80") + 
+  scale_shape_manual(values = setNames(c(16, 15, 1), c("p.adj < 0.05", "p < 0.05", "NS"))) + 
+  theme(strip.background = element_blank(), strip.text = element_text(face = "bold")) +
+  #scale_y_continuous(limits = c(0, 9), breaks = seq(0, 9, 1)) + 
+  #scale_x_continuous(limits = c(-2, 2)) + 
+  labs(x = "Log2(Hazard Ratioadj)", color = "Cancer Type", shape = "Significance")
+
+g_volcano + geom_text_repel(aes(label = gene_label), size=3, max.overlaps = 1, fontface = "bold")
+ggsave(paste0(outdir, "figures/os_driver_vus_volcano.svg"), height = 4, width = 6)
+
+```
+
+```{r}
+
+g_volcano + geom_text_repel(aes(label = gene_label), size=3, max.overlaps = 20, fontface = "bold") +
+  scale_y_continuous(limits = c(0, 1)) 
+
+ggsave(paste0(outdir, "figures/os_driver_vus_volcano_zoom.svg"), height = 4, width = 6)
+
+```
+
+### KEAP1
+
+```{r}
+
+g_os_keap1_mutclass <- os_by_mut_class$KEAP1_LUAD$uv_model %>% 
+  ggsurvfit(., linewidth = 0.8) + add_censor_mark(shape = "|", size = 2) + 
+  add_risktable(risktable_stats = "n.risk") +
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 120, 24))) + 
+  scale_color_manual(values = alt_colors, labels = c("WT", "Oncogenic", "VUS")) + scale_fill_manual(values = alt_colors) +
+  theme_cowplot(12) +
+  theme(legend.position = c(0.8, 0.8)) + labs(color = "Mutation Class", title = "KEAP1 - LUAD", y = "Overall survival probability", x = "Time from sequencing (mo)")
+g_os_keap1_mutclass
+
+pdf(paste0(outdir, "figures/os_mut_class_keap1_kaplan meier.pdf"), height = 4, width = 4.5)
+print(g_os_keap1_mutclass)
+dev.off()
+
+surv_median(os_by_mut_class$KEAP1_LUAD$uv_model) 
+
+tidy(os_by_mut_class$KEAP1_LUAD$mv_model, exponentiate = T, conf.int = T)
+
+tbl_regression(os_by_mut_class$KEAP1_LUAD$mv_model, 
+               pvalue_fun = function(x) ifelse(is.na(x), "", formatC(x, digits = 3, format = "g")), 
+               exponentiate = T) %>% bold_labels() %>%
+  as_flex_table()
+
+ggforest(os_by_mut_class$KEAP1_LUAD$mv_model, data = os_by_mut_class$KEAP1_LUAD$input_data)
+
+```
+
+## Zygosity
+
+### Volcano
+
+```{r}
+
+signif_hits <- os_zyg %>% 
+  mutate(cancer_type = fct_inorder(cancer_type)) %>%
+  filter(term == "biallelic") %>%
+  filter(p.adj < 0.05) %>%
+  mutate(combo_gene_type = paste0(gene, "_", cancer_type))
+
+signif_hits
+
+g_volcano_zyg <- os_zyg2 %>% 
+  filter(term == "biallelic") %>%
+  mutate(hazard_ratio = (estimate),
+         combo = paste0(term, " vs. ", ref),
+         combo_gene_type = paste0(gene, "_", cancer_type)) %>%
+  mutate(gene_label = fct_infreq(ifelse(combo_gene_type %in% signif_hits$combo_gene_type, (as.character(gene)), NA)),
+         type_label = fct_infreq(ifelse(combo_gene_type %in% signif_hits$combo_gene_type, (as.character(cancer_type)), NA))) %>%
+  mutate(p.adj.signif.label = factor(case_when(p.adj < 0.05 ~ "p.adj < 0.05", p.value < 0.05 ~ "p < 0.05", TRUE ~ "NS"),
+                                     levels = c("p.adj < 0.05", "p < 0.05", "NS"))) %>%
+  mutate(type_label = fct_relevel(type_label, c("LUAD", "COAD", "IDC", "PAAD", "GB", "ILC", "PANET", "PRAD"))) %>%
+  mutate(across(where(is.factor), fct_drop)) %>% filter(term != "Unknown") %>%
+  ggplot(aes(x = log2(hazard_ratio), y = -log10(p.value), color = type_label)) + 
+  geom_vline(xintercept = 0, linetype = "dotted") + 
+  geom_point(alpha = 0.8, aes(shape = p.adj.signif.label), size =3, stroke = 1) +
+  geom_text_repel(aes(label = gene_label), size=3, max.overlaps = 20, fontface = "bold") + #, color = "black") + 
+  facet_wrap(~ combo) + 
+  theme_cowplot(12) + 
+  #scale_color_manual(values = type_colors, na.value = "gray80") +
+  mskRvis::scale_color_msk("main", na.value = "gray80") + 
+  scale_shape_manual(values = setNames(c(16, 15, 1), c("p.adj < 0.05", "p < 0.05", "NS"))) + 
+  theme(strip.background = element_blank(), strip.text = element_text(face = "bold")) +
+  #scale_y_continuous(limits = c(0, 9), breaks = seq(0, 9, 1)) + 
+  scale_x_continuous(limits = c(-2, 2)) + 
+  labs(x = "Log2(Hazard Ratioadj)", color = "Cancer Type", shape = "Significance")
+
+g_volcano_zyg
+
+```
+
+### Forest
+
+```{r}
+
+g_hits_combined <- os_zyg %>%
+  rbind(os_zyg_alt, fill = T) %>%
+  left_join(os_zyg2 %>% filter(term == "biallelic") %>% select(cancer_type, gene, p.value_vs_mono = p.value, estimate_vs_mono = estimate)) %>%
+  mutate(combo = paste0(gene, "\n", cancer_type)) %>%
+  mutate(signif_label = factor(case_when(p.adj < 0.05 ~ "p.adj < 0.05", p.value < 0.05 ~ "p < 0.05", TRUE ~ "ns"),
+                               levels = c("p.adj < 0.05", "p < 0.05", "ns"))) %>%
+  group_by(combo) %>% filter(min(ifelse(term != "altered", p.adj, NA), na.rm = T) < 0.05) %>% ungroup() %>%
+  group_by(cancer_type, gene) %>% mutate(min_hr = min(estimate, na.rm = T),
+                                         alt_hr = min(ifelse(term == "TRUE", estimate, NA), na.rm = T),
+                                         mono_hr = min(ifelse(term == "monoallelic", estimate, NA), na.rm = T)) %>% ungroup() %>%
+  group_by(gene) %>% mutate(max_gene_alt_hr = max(alt_hr),
+                            max_bi_v_mono = max(estimate_vs_mono),
+                            min_mono_hr = min(abs(log(mono_hr)))) %>% ungroup() %>%
+  arrange(-min_mono_hr, -mono_hr, max_bi_v_mono, estimate_vs_mono) %>% mutate(combo = fct_inorder(combo))
+
+g_hits_combined
+
+
+g_hits_forest_combined <- g_hits_combined %>%
+  mutate(term = factor(case_when(term == "monoallelic" ~ "Monoallelic", term == "biallelic" ~ "Biallelic",
+                          term == "altered" ~ "Altered"), levels = c("Monoallelic", "Biallelic", "Altered"))) %>%
+  ggplot() + 
+  #ggforestplot::geom_stripes(aes(y = combo), odd = "gray97") + 
+  geom_vline(xintercept = 1) + 
+  geom_linerange(aes(y = combo, xmin = conf.low, xmax = conf.high, color = term), position = position_dodge(width = 0.8)) +
+  geom_point(aes(y = combo, x = estimate, color = term, shape = signif_label), size = 2, alpha = 0.9, position = position_dodge(width = 0.8)) + 
+  scale_color_manual(values = alt_colors) + 
+  scale_shape_manual(values = setNames(c(19, 15, 1), c("p.adj < 0.05", "p < 0.05", "ns")), na.value = NA) + 
+  #coord_flip() + 
+  #scale_x_continuous(limits = c(0, 4)) + 
+  scale_x_continuous(trans = "log2") + 
+  theme_cowplot(12) +
+  theme(strip.background = element_blank(), strip.text.y.left = element_text(angle = 0, face = "bold", hjust = 1),
+        strip.placement = "outside", panel.spacing = unit(0, "npc"), panel.border = element_rect(color = "gray", linewidth = 0.1),
+        #axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        axis.line.y = element_blank()) +
+  labs(x = "Hazard Ratio(adj)", y = "Gene\nCancer Type", color = "Mutation Class", shape = "Significance") +
+  guides(color = guide_legend(reverse = T))
+
+g_hits_forest_combined
+
+```
+
+### Combined
+
+```{r}
+
+g_volcano_zyg + g_hits_forest_combined + plot_annotation(tag_levels = "A") + plot_layout(widths = c(1.5, 1))
+ggsave(paste0(outdir, "figures/os_zyg_volcano_forest.svg"), height = 6, width = 12)
+
+```
+
+### KEAP1
+
+```{r}
+
+g_os_keap1_zyg <- os_by_zyg$KEAP1_LUAD$uv_model %>% 
+  ggsurvfit(linewidth = 0.8) + add_censor_mark(shape = "+", size = 2) + 
+  add_risktable(risktable_stats = "n.risk") +
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 120, 24))) + 
+  scale_color_manual(values = alt_colors, labels = c("WT", "Biallelic", "Monoallelic")) + 
+  theme_cowplot(12) +
+  theme(legend.position = c(0.8, 0.8)) + labs(color = "KEAP1 zygosity", title = "OS", y = "Overall survival probability", x = "Time from sequencing (mo)")
+g_os_keap1_zyg
+
+pdf(paste0(outdir, "figures/os_zyg_keap1_kaplan meier.pdf"), height = 4, width = 4.5)
+print(g_os_keap1_zyg)
+dev.off()
+
+pretty_os_input <- os_by_zyg$KEAP1_LUAD$input_data %>% 
+  mutate(biallelic_label = factor(biallelic_label, levels = c("wt", "monoallelic", "biallelic"))) 
+
+ggforest(os_by_zyg$KEAP1_LUAD$mv_model, data = pretty_os_input)
+ggsave(paste0(outdir, "figures/os_zyg_keap1_forest.svg"), width = 5.5, height = 4)
+
+surv_median(os_by_zyg$KEAP1_LUAD$uv_model)
+
+tidy(os_by_zyg$KEAP1_LUAD$mv_model, exponentiate = T, conf.int = T)
+
+tbl_regression(os_by_zyg$KEAP1_LUAD$mv_model, 
+               pvalue_fun = function(x) ifelse(is.na(x), "", formatC(x, digits = 3, format = "g")), 
+               exponentiate = T) %>% bold_labels() %>%
+  as_flex_table()
+
+```

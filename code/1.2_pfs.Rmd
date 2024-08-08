@@ -1,0 +1,387 @@
+---
+title: "TSG Zygosity PFS"
+output: html_document
+date: "2023-07-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(readr)
+library(tools)
+library(ggrepel)
+library(RColorBrewer)
+library(plotly)
+library(svglite)
+library(data.table)
+library(readxl)
+library(gridExtra)
+library(colorspace)
+library(broom)
+library(binom)
+library(rstatix)
+library(ggpubr)
+library(ggnewscale)
+library(patchwork)
+library(survminer)
+library(survival)
+library(ggupset)
+library(magrittr)
+library(ggbeeswarm)
+library(gtsummary)
+set_gtsummary_theme(theme_gtsummary_compact())
+library(gt)
+library(ggsurvfit)
+
+```
+
+# Load data
+
+```{r}
+
+indir_pfs <- "../../io/data/"
+indir <- "data/"
+outdir <- "results/"
+
+gene_x_barcode <- fread(paste0(indir, "parsed/zyg_mut_class.csv"))
+gene_x_barcode <- gene_x_barcode %>% filter(Hugo_Symbol == "KEAP1" & !is.na(biallelic_label))
+
+data_samples_50k <- fread(paste0(indir, "input/data_clinical_sample.oncokb.txt.gz")) # use this for cancer type/oncotree code -- manually curated 
+data_samples_facets <- fread("../../../../IMPACT Data/raw/2023_09_20/impact_facets_facets_annotated.cohort.txt.gz")
+fga_tmb_blacklist <- fread(paste0(indir, "input/high_mutational_cna_burden_tumors.50k.txt"))
+fga_tmb_blacklist <- fga_tmb_blacklist$x
+
+```
+
+## PFS clinical data
+
+```{r}
+
+pfs_clinical <- list()
+
+```
+
+### Chemo IO cohort
+
+```{r}
+
+data_clinical_raw <- read_xlsx(paste0(indir_pfs,"merged_MSK_data_send_out_2022-01-31.xlsx"), sheet = "CHEMO_IO")
+names(data_clinical_raw) <- tolower(gsub("\\.+", "_", names(data_clinical_raw)))
+data_clinical_raw <- data_clinical_raw %>% 
+  filter(!is.na(dmp_sample_id)) %T>% {print(paste0("impact: ", n_distinct(.$dmp_patient_id)))} %>% 
+  filter(dmp_sample_id %in% gene_x_barcode$Tumor_Sample_Barcode) %T>% {print(paste0("gene x barcode: ", n_distinct(.$dmp_patient_id)))} 
+
+pfs_clinical[["chemo_io"]] <- data_clinical_raw
+rm(data_clinical_raw)
+
+```
+
+### IO cohort
+
+```{r}
+
+data_clinical_raw <- read_xlsx(paste0(indir_pfs,"lung_io/MSK updated LTR cohort_RT 12-2022.xlsx")) %>% make_clean_names()
+names(data_clinical_raw) <- tolower(gsub("\\.+", "_", names(data_clinical_raw)))
+
+data_clinical_raw <- data_clinical_raw %T>% {print(n_distinct(.$id))} %>% 
+  select(-c(mrn, dob)) %>% select(dmp_patient_id = dmp_id, dmp_sample_id, everything()) %>%
+  filter(!is.na(dmp_sample_id)) %T>% {print(paste0("impact: ", n_distinct(.$dmp_patient_id)))} %>% 
+  filter(dmp_sample_id %in% gene_x_barcode$Tumor_Sample_Barcode) %T>% {print(paste0("gene x barcode: ", n_distinct(.$dmp_patient_id)))}
+
+pfs_clinical[["io"]] <- data_clinical_raw
+rm(data_clinical_raw)
+
+```
+
+# Zygosity overview
+
+## Chemo IO
+
+```{r}
+
+zyg <- list() 
+sample_lists <- list()
+
+sample_lists[["chemo_io"]] <- unique(pfs_clinical$chemo_io$dmp_sample_id)
+
+zyg[["chemo_io"]] <- gene_x_barcode %>%
+  filter(Tumor_Sample_Barcode %in% pfs_clinical$chemo_io$dmp_sample_id) %>%
+  select(Tumor_Sample_Barcode, Hugo_Symbol, biallelic_label) %>% unique() %>%
+  mutate(patient_id = substr(Tumor_Sample_Barcode, 1, 9),
+         biallelic_label = na_if(biallelic_label, "")) %T>% {print(paste0("n chemo with gxb: ", n_distinct(.$Tumor_Sample_Barcode)))} %>%
+  left_join(data_samples_facets %>% select(tumor_sample, purity), by = c(Tumor_Sample_Barcode = "tumor_sample")) %>%
+  filter(purity > 0.15) %T>% {print(paste0("purity > 0.15: ", n_distinct(.$Tumor_Sample_Barcode)))} %>% select(-purity) %>%
+  filter(!Tumor_Sample_Barcode %in% fga_tmb_blacklist) %T>% {print(paste0("FGA/TMB exclude list: ", n_distinct(.$Tumor_Sample_Barcode)))} %>%
+  filter(!is.na(biallelic_label)) %T>% {print(paste0("non-missing biallelic label: ", n_distinct(.$Tumor_Sample_Barcode)))}
+
+```
+
+## IO
+
+```{r}
+
+zyg[["io"]] <- gene_x_barcode %>%
+  filter(Tumor_Sample_Barcode %in% pfs_clinical$io$dmp_sample_id) %>%
+  select(Tumor_Sample_Barcode, Hugo_Symbol, biallelic_label) %>% unique() %>%
+  mutate(patient_id = substr(Tumor_Sample_Barcode, 1, 9),
+         biallelic_label = na_if(biallelic_label, "")) %>%
+  left_join(data_samples_facets %>% select(tumor_sample, purity), by = c(Tumor_Sample_Barcode = "tumor_sample")) %>%
+  filter(purity > 0.15) %T>% {print(paste0("purity > 0.15: ", n_distinct(.$Tumor_Sample_Barcode)))} %>% select(-purity) %>%
+  filter(!Tumor_Sample_Barcode %in% fga_tmb_blacklist) %T>% {print(paste0("FGA/TMB exclude list: ", n_distinct(.$Tumor_Sample_Barcode)))} %>%
+  filter(!is.na(biallelic_label)) %T>% {print(paste0("non-missing biallelic label: ", n_distinct(.$Tumor_Sample_Barcode)))}
+
+```
+
+# Patient characteristics - clinical
+
+## Chemo/IO
+
+<https://pubmed.ncbi.nlm.nih.gov/36775193/>
+
+```{r}
+
+pfs_clinical$chemo_io <- pfs_clinical$chemo_io %>%
+  mutate(dmp_patient_id = substr(dmp_sample_id, 1, 9)) %>% # messed up for P-0019346-T01-IM6
+  mutate(across(c(impact_tmb, dnlr, msi_score), as.numeric), 
+         progression = as.logical(as.numeric(na_if(progression, "unknown"))),
+         albumin = as.numeric(albumin),
+         pack_yrs = as.numeric(pack_yrs),
+         ecog = ifelse(ecog %in% c("2", "3"), "2-3", ecog),
+         pdl1 = as.numeric(percent_pd_l1),
+         pdl1_status = factor(pdl1_status, levels = c("<1", "1-49", ">=50", "unknown")),
+         type_coded = factor(type_coded, levels = c("Adenocarcinoma", "Squamous cell carcinoma", "Other")),
+         type_coded = fct_recode(type_coded, `ADC` = "Adenocarcinoma", `SQCLC` = "Squamous cell carcinoma")
+         ) %>%
+  select(dmp_patient_id, sex, ecog, pdl1_status, impact_tmb, dnlr, type_coded, pfs_mo, progression, pack_yrs)
+
+```
+
+## IO
+
+```{r}
+
+pfs_clinical$io <- pfs_clinical$io %>%
+  select(-c(id, contains("date"), contains("LTR"), hr_original_annotation, contains("stopped_io"),
+            alive_at_5_years_yes_no_na_censored_before_5_years_, best_objective_response, death, os_mo_, ltr_vs_str_vs_pd_vs_ne, `_38`, 
+            contains("bor"), baseline_tumor_burden_mm_, tp53, kras_53, egfr_54, ret_55, ret_65, ros1, met, alk, stk11, keap1, both_dnlr_and_tmb_z_score_available, 
+            smarca4, her2, braf, ntrk)) %>%
+  rename(pdl1 = x_pd_l1, pfs_mo = pfs_mo_, smoking_status = smoking_status_current_former_never_, egfr = egfr_17, kras = kras_18) %>%
+  mutate(across(c(pack_yrs, contains("age"), albumin, dnlr, line_of_therapy, pdl1, impact_tmb, z_score, pfs_mo), as.numeric),
+         type = fct_lump_n(type, 2),
+         progression = as.logical(as.numeric(progression)), 
+         ecog = ifelse(ecog %in% c(2,3), "2-3", as.character(ecog)), 
+         across(where(is.character), as.factor)) %>%
+  mutate(pdl1_status = factor(case_when(pdl1 < 1 ~ "<1", pdl1 < 50 ~ "1-49", pdl1 >= 50 ~ ">=50", is.na(pdl1) ~ "unknown"),
+                              levels = c("<1", "1-49", ">=50", "unknown"))) %>%
+  select(dmp_patient_id, sex=gender, ecog, pdl1_status, impact_tmb, dnlr, egfr, type, pack_yrs, pfs_mo, progression) %>%
+  filter(egfr == "Wild type") %>% select(-egfr) %>%
+  as.data.frame()
+# 
+# tbl_summary(pfs_clinical$io %>% select(-dmp_patient_id)) %>% bold_labels() %>% as_flex_table()
+# 
+# zyg$io <- zyg$io %>% filter(patient_id %in% pfs_clinical$io$dmp_patient_id) 
+# 
+# zyg$io %>% tbl_summary(include = c(biallelic_label, Hugo_Symbol), by = Hugo_Symbol) %>% as_flex_table()
+
+
+```
+
+# PFS
+
+### Function setup
+
+```{r}
+
+cohort_name <- "chemo_io"
+
+merge_dataset <- function(cohort_name) {
+  
+  d <- pfs_clinical[[cohort_name]] %>% rename(patient_id = dmp_patient_id) %>%
+    left_join(zyg[[cohort_name]] %>% select(-Tumor_Sample_Barcode)
+              , by = "patient_id") %>% 
+    filter(!is.na(biallelic_label)) %T>% {print(paste0("n with non NA biallelic label:", n_distinct(.$patient_id)))} %>%
+    filter(!is.na(progression) & !is.na(pfs_mo)) %T>% {print(paste0("n with progression data:", n_distinct(.$patient_id)))} %>%
+    # remove genes if n < 5 for any zyg group 
+    group_by(Hugo_Symbol, biallelic_label) %>% add_count() %>% ungroup() %>% 
+    group_by(Hugo_Symbol) %>% filter(min(n) > 5 & n_distinct(biallelic_label) == 3) %>% select(-n) %>% ungroup() %>%
+    mutate(across(where(is.character) & !patient_id, as.factor)) %>%    unique()
+  
+  return(d)
+  
+}
+
+#d <- merge_dataset("chemo_io")
+
+alt_colors <- setNames(c("dodgerblue4", "lightblue3", "gray",
+                         "dodgerblue4", "lightblue3", "gray",
+                         "coral2", darken("peachpuff", 0.1), darken("peachpuff", 0.1),
+                         "coral2", darken("peachpuff", 0.1)), 
+                       c("biallelic", "monoallelic", "wt",
+                         "Biallelic", "Monoallelic", "WT",
+                       "Driver", "Vus", "VUS", 
+                       "driver", "vus"))
+
+pfs_uv <- function(d) {
+  
+  lapply(levels(d$Hugo_Symbol), function(gene_name) {
+    
+    d_sub <- d %>% filter(Hugo_Symbol == gene_name) %>% select(-Hugo_Symbol)
+    
+    # surv object
+    surv = survfit2(Surv(pfs_mo, progression) ~ biallelic_label, data = d_sub)
+    names(surv$strata) <- gsub("biallelic_label=", "", names(surv$strata))
+
+    # kaplan meier curve
+    
+    gg <- surv %>% 
+  ggsurvfit(linewidth = 0.8) + add_censor_mark(size = 2) + 
+  add_risktable(risktable_stats = "n.risk") +
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 120, 12))) + 
+  scale_color_manual(values = alt_colors) + #, labels = c("WT", "Biallelic", "Monoallelic")) + 
+  theme_cowplot(12) +
+  theme(legend.position = c(0.8, 0.8)) + 
+      labs(color = "KEAP1 zygosity", title = paste0("PFS: ", cohort_name), y = "Progression-free\nsurvival probability", x = "Time (mo)")
+  print(gg)
+  pdf(paste0(outdir, "figures/", cohort_name, "_pfs_", gene_name, "_km.pdf"), height = 4, width = 4.5)
+  print(gg)
+  dev.off()
+  
+  medians <- surv_median(surv) %>% mutate(gene = gene_name) %>% select(gene, everything())
+  print(medians)
+
+  diffs <- pairwise_survdiff(Surv(pfs_mo, progression) ~ biallelic_label, data = d_sub) %>% tidy() %>% mutate(gene = gene_name) %>% select(gene, everything())
+  print(diffs)
+  
+  return(list(plot = gg, median_table = medians, diff_table = diffs))
+  
+  })
+  
+}
+
+pfs_mv <- function(d) {
+  
+  lapply(unique(d$Hugo_Symbol), function(gene_name) {
+    
+    d_sub <- d %>% filter(Hugo_Symbol == gene_name) %>% select(-Hugo_Symbol)
+    d_sub[[gene_name]] <- factor(d_sub$biallelic_label, levels = c("wt", "monoallelic", "biallelic"))
+    d_sub <- d_sub %>% 
+      select(-c(biallelic_label, patient_id)) %>%
+      select(all_of(gene_name), everything()) %>% drop_na() %>% # *** removing any pts with missing covar data
+      as.data.frame()
+    
+    model = coxph(Surv(pfs_mo, progression) ~ ., data = d_sub)
+    model
+    ggforest(model, data = d_sub)
+    ggsave(paste0(outdir, "figures/", cohort_name, "_pfs_", gene_name, "_forest.svg"), width = 5.5, height = 4)
+
+    reg_tbl <- tbl_regression(model, exponentiate = T,
+                              pvalue_fun = function(x) ifelse(is.na(x), "", formatC(x, digits = 3, format = "g"))) %>% 
+      bold_p() %>% bold_labels()  %>% add_n(location = "level") 
+    reg_tbl %>% as_flex_table() %>% print()
+    reg_tbl %>% as_gt() %>% gtsave(filename = paste0(outdir, cohort_name, "_pfs_", gene_name, "_mvtable.docx"))
+    
+  })
+  }
+
+```
+
+## Chemo/IO
+
+```{r}
+
+cohort_name = "chemo_io"
+
+pfs_uv(merge_dataset(cohort_name))
+pfs_mv(merge_dataset(cohort_name))
+
+#merge_dataset(cohort_name) %>% fwrite(file = paste0(indir, "parsed/pfs_chemo_io_input.csv"), row.names = F)
+
+```
+
+## IO
+
+```{r}
+
+cohort_name = "io"
+
+pfs_uv(merge_dataset(cohort_name))
+pfs_mv(merge_dataset(cohort_name))
+
+# merge_dataset(cohort_name) %>% fwrite(file = paste0(indir, "parsed/pfs_io_input.csv"), row.names = F)
+
+```
+
+## by mut class
+
+```{r}
+
+d_mutclass <- gene_x_barcode %>%
+  filter(Hugo_Symbol == "KEAP1") %>%
+  filter(Tumor_Sample_Barcode %in% sample_lists$chemo_io) %>%
+  select(Tumor_Sample_Barcode, Hugo_Symbol, mutation_class) %>% unique() %>%
+  mutate(patient_id = substr(Tumor_Sample_Barcode, 1, 9),
+         mutation_class = na_if(mutation_class, "")) %T>% {print(paste0("n chemo with gxb: ", n_distinct(.$Tumor_Sample_Barcode)))} %>%
+  left_join(data_samples_facets %>% select(tumor_sample, purity), by = c(Tumor_Sample_Barcode = "tumor_sample")) %>%
+  filter(purity > 0.15) %T>% {print(paste0("purity > 0.15: ", n_distinct(.$Tumor_Sample_Barcode)))} %>% select(-purity) %>%
+  filter(!Tumor_Sample_Barcode %in% fga_tmb_blacklist) %T>% {print(paste0("FGA/TMB exclude list: ", n_distinct(.$Tumor_Sample_Barcode)))} %>%
+  filter(!is.na(mutation_class)) %T>% {print(paste0("non-missing mut class: ", n_distinct(.$Tumor_Sample_Barcode)))}
+
+pfs_clinical[["chemo_io_mutclass"]] <- pfs_clinical$chemo_io %>% rename(patient_id = dmp_patient_id) %>%
+    left_join(d_mutclass %>% select(-Tumor_Sample_Barcode)
+              , by = "patient_id") %>% unique() %>%
+    filter(!is.na(progression) & !is.na(pfs_mo) & !is.na(mutation_class) & progression != "unknown") %T>% {print(paste0("n with progression data: ", n_distinct(.$patient_id)))} %>%
+  mutate(across(c(dnlr, impact_tmb), as.numeric)) %>%
+    # remove genes if n < 5 for any zyg group 
+    group_by(Hugo_Symbol, mutation_class) %>% add_count() %>% ungroup() %>% 
+    group_by(Hugo_Symbol) %>% filter(min(n) > 5 & n_distinct(mutation_class) == 3) %>% select(-n) %>% ungroup() %>%
+    mutate(across(where(is.character) & !patient_id, as.factor))
+
+
+```
+
+```{r}
+
+# surv object
+surv = survfit2(Surv(pfs_mo, progression) ~ mutation_class, data = pfs_clinical$chemo_io_mutclass)
+names(surv$strata) <- gsub("mutation_class=", "", names(surv$strata))
+
+surv_median(surv)
+    
+gg <- surv %>% 
+  ggsurvfit(linewidth = 0.8) + add_censor_mark(size = 2) + 
+  add_risktable(risktable_stats = "n.risk") +
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 120, 12))) + 
+  scale_color_manual(values = alt_colors, labels = c("Oncogenic", "VUS", "WT")) + 
+  theme_cowplot(12) +
+  theme(legend.position = c(0.8, 0.8)) + 
+      labs(color = "KEAP1 mutation class", title = paste0("PFS: Chemo/IO"), y = "Progression-free\nsurvival probability", x = "Time (mo)")
+gg
+
+  pdf(paste0(outdir, "figures/chemo_io_mutclass_pfs_KEAP1_km.pdf"), height = 4, width = 4.5)
+  print(gg)
+  dev.off()
+```
+
+```{r}
+
+d_sub <- pfs_clinical$chemo_io_mutclass %>% 
+  select(mutation_class, sex, ecog, pdl1_status, impact_tmb, dnlr, pack_yrs, pfs_mo, progression) %>% # type_coded
+  mutate(mutation_class = factor(mutation_class, levels = c("wt", "vus", "driver")),
+         ecog = factor(ifelse(ecog %in% c("2", "3"), "2-3", as.character(ecog)))) %>%
+  drop_na() %>% # *** removing any pts with missing covar data
+  as.data.frame()
+    
+model = coxph(Surv(pfs_mo, progression) ~ ., data = d_sub)
+
+model
+ggforest(model, data = d_sub)
+ggsave(paste0(outdir, "figures/keap1 pfs chemo io by mut class_forest_exact p.svg"), width = 5.5, height = 4)
+
+tbl_regression(model, exponentiate = T,
+                              pvalue_fun = function(x) ifelse(is.na(x), "", formatC(x, digits = 2, format = "g"))) %>% 
+      bold_p() %>% bold_labels()  %>% add_n(location = "level") %>% as_flex_table()
+
+```

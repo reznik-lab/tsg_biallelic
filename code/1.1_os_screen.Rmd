@@ -1,0 +1,408 @@
+---
+title: "TSG OS"
+output: html_document
+date: "2023-07-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(readr)
+library(tools)
+library(ggrepel)
+library(RColorBrewer)
+library(plotly)
+library(svglite)
+library(data.table)
+library(gridExtra)
+library(rstatix)
+library(ggpubr)
+library(patchwork)
+library(survminer)
+library(survival)
+library(magrittr)
+library(gtable)
+library(grid)
+library(lubridate)
+library(gtsummary)
+set_gtsummary_theme(theme_gtsummary_compact())
+library(dtplyr)
+library(parallel)
+library(survival)
+library(survminer)
+library(ggsurvfit)
+
+```
+
+# Setup
+
+```{r}
+
+indir <- "data/"
+outdir <- "results/"
+
+source("helper_functions_tsg.R")
+
+```
+
+# Load data
+
+```{r}
+
+zyg_mut_class <- fread(paste0(indir, "parsed/zyg_mut_class.csv"), na.strings = "")
+data_os <- fread(paste0(indir, "input/data_os_pancan_revision_ALL.csv"), na.strings = "")
+
+cohort_table_1 <- fread(paste0(indir, "input/Table_S1_clinDataFiltered.txt"))
+
+```
+
+```{r}
+
+data_os_zyg <- data_os %>%
+  lazy_dt() %>%
+  inner_join(zyg_mut_class, by = c("sample_id" = "Tumor_Sample_Barcode")) %>%
+  mutate(mutation_class_combined = ifelse(mutation_class %in% c("driver", "vus"), "altered", mutation_class),
+         biallelic_label_combined = ifelse(biallelic_label %in% c("biallelic", "monoallelic"), "altered", biallelic_label)) %>%
+  as.data.table()
+
+fwrite(data_os_zyg, paste0(indir, "parsed/data_os_zyg.csv"), row.names = F)
+
+```
+
+# Function setup
+
+## Gene/cancer type pairs for testing
+
+Cancer types from Table 1 with at least 100 patients & 10 patients with 5 events per group
+
+```{r}
+
+pairs_to_test <- list()
+
+covars_list <- c("disease_status", "sex", "age_at_dx", "oncokb_level_1", "fga", "tmb", "msi_score") 
+required_fields <- c("os_status", "os_months", "oncotree_code", covars_list)
+
+```
+
+```{r}
+
+# screen_input <- data_os_zyg %>% lazy_dt() %>%
+#   select(sample_id, mutation_class, Hugo_Symbol, all_of(required_fields)) %>% drop_na() %>%
+#   as.data.table()
+# fwrite(screen_input, paste0(indir, "os_screen_input_with_covars.csv"))
+
+```
+
+### Mutation class
+
+```{r}
+
+pairs_to_test[["mutation_class"]] <- data_os_zyg %>% lazy_dt() %>%
+  select(sample_id, mutation_class, Hugo_Symbol, all_of(required_fields)) %>% drop_na() %>% 
+  filter(oncotree_code %in% cohort_table_1$ONCOTREE_CODE) %>%
+  group_by(oncotree_code) %>% mutate(n_type = n_distinct(sample_id)) %>%
+  group_by(Hugo_Symbol, oncotree_code, mutation_class) %>% add_count() %>% mutate(n_events = sum(os_status)) %>%
+  group_by(Hugo_Symbol, oncotree_code) %>% filter(n_type >= 100 & n_distinct(mutation_class) == 3 & min(n) >= 10 & min(n_events) >= 5) %>% ungroup() %>%
+  select(Hugo_Symbol, oncotree_code) %>% unique() %>% as.data.table()
+
+n_distinct(pairs_to_test$mutation_class$Hugo_Symbol)
+n_distinct(pairs_to_test$mutation_class$oncotree_code)
+nrow(pairs_to_test$mutation_class)
+
+  
+```
+
+### Zygosity (biallelic label)
+
+```{r}
+
+pairs_to_test[["biallelic_label"]] <- data_os_zyg %>% lazy_dt() %>%
+  select(sample_id, biallelic_label, Hugo_Symbol, all_of(required_fields)) %>% drop_na() %>% 
+  filter(oncotree_code %in% cohort_table_1$ONCOTREE_CODE) %>%
+  group_by(oncotree_code) %>% mutate(n_type = n_distinct(sample_id)) %>%
+  group_by(Hugo_Symbol, oncotree_code, biallelic_label) %>% add_count() %>% mutate(n_events = sum(os_status)) %>%
+  group_by(Hugo_Symbol, oncotree_code) %>% filter(n_type >= 100 & n_distinct(biallelic_label) == 3 & min(n) >= 10 & min(n_events) >= 5) %>% ungroup() %>%
+  select(Hugo_Symbol, oncotree_code) %>% unique() %>% as.data.table()
+
+n_distinct(pairs_to_test$biallelic_label$Hugo_Symbol)
+n_distinct(pairs_to_test$biallelic_label$oncotree_code)
+nrow(pairs_to_test$biallelic_label)
+
+
+```
+
+```{r}
+
+plot(eulerr::euler(list(mutation_class = paste0(pairs_to_test$mutation_class$Hugo_Symbol, "_", pairs_to_test$mutation_class$oncotree_code),
+                        biallelic_label = paste0(pairs_to_test$biallelic_label$Hugo_Symbol, "_", pairs_to_test$biallelic_label$oncotree_code))), quantities = T)
+
+```
+
+## OS by \_ function
+
+For each gene/cancer type pair, return:
+
+-   survfit object (KM)
+
+-   coxph object
+
+    -   OS \~ [variable] + disease status + sex + age at dx + level 1 actionable alt + FGA + TMB + MSI (multivariate)
+
+-   tidy coxph object with ns
+
+```{r}
+
+os_by_var <- function(combo = NULL, gene_name, cancer_type_name, variable, ref = "wt", covars = c("disease_status", "sex", "age_at_dx", "oncokb_level_1", "fga", "tmb", "msi_score"), data = data_os_zyg) {
+  
+  if(!is.null(combo)) {
+    gene_name <- combo[1]
+    cancer_type_name <- combo[2]
+  }
+  
+  d <- data_os_zyg %>%
+    filter(oncotree_code == cancer_type_name & Hugo_Symbol == gene_name) %>%
+    select(os_months, os_status, all_of(c(variable, covars))) %>% 
+    mutate(across(where(is.character), ~ fct_drop(fct_infreq(.x)))) %>%
+    mutate(disease_status = fct_relevel(disease_status, "Primary")) %>%
+    drop_na() %>% 
+    mutate(!!as.name(variable) := fct_relevel(!!as.name(variable), ref))
+  
+  # remove covars with only one level
+  to_remove <- d %>% select(where(~all(n_distinct(.)==1))) %>% names()
+  d <- d %>% select(-all_of(to_remove))
+  
+  covars <- covars[covars %in% names(d)]
+  
+  # consolidate small levels
+  d <- d %>% mutate(across(where(is.factor) & !variable, ~ drop_small_factor_levels_col(.x, min_n = 10, verbose = F)))
+  
+  counts_t <- d %>% group_by(!!as.name(variable)) %>% count() %>% pivot_wider(names_from = !!as.name(variable), names_prefix = "n_", values_from = n)
+
+  surv <- survfit2(as.formula(paste0("Surv(os_months, os_status) ~ ", variable)), data = d)
+  #surv
+  #surv %>% ggsurvplot()
+
+  model <- coxph(as.formula(paste0("Surv(os_months, os_status) ~ ", paste0(variable, " + ", paste0(covars, collapse = " + ")))), data = d)
+  #ggforest(model)
+  
+  results_table <- tidy(model, exponentiate = T, conf.int = T) %>%
+    mutate(gene = gene_name, cancer_type = cancer_type_name, ref = ref) %>%
+    cbind(counts_t) %>%
+    select(gene, cancer_type, ref, term, everything())
+
+  return(list(uv_model = surv, mv_model = model, input_data = d, res_table = results_table))
+  
+  }
+
+```
+
+```{r}
+
+# keap1 luad
+res <- os_by_var(gene_name = "KEAP1", cancer_type_name = "LUAD", variable = "biallelic_label")
+ggforest(res$mv_model, data = res$input_data)
+res$res_table
+save(res, file = paste0(outdir, "os_zyg_screen_keap1_luad.Robj"))
+
+res <- os_by_var(gene_name = "KEAP1", cancer_type_name = "LUAD", variable = "mutation_class")
+ggforest(res$mv_model, data = res$input_data)
+res$res_table
+save(res, file = paste0(outdir, "os_mutclass_screen_keap1_luad.Robj"))
+
+
+```
+
+# OS by mutation class
+
+## WT ref
+
+```{r}
+
+gene_type_list <- as.list(as.data.frame(t(pairs_to_test$mutation_class)))
+os_by_mut_class <- mclapply(gene_type_list, os_by_var, variable = "mutation_class", mc.cores = 6)
+
+```
+
+```{r}
+
+mut_class_names <- unlist(lapply(gene_type_list, function(x) {paste0(x[1], "_", x[2])}))
+names(mut_class_names) <- NA
+names(os_by_mut_class) <- mut_class_names
+
+```
+
+```{r}
+
+os_by_mut_class_table <- do.call(rbind, lapply(os_by_mut_class, function(x) {return(x$res_table)}))
+os_by_mut_class_table <- os_by_mut_class_table %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_mut_class_table %>% filter(grepl("mutation_classvus", term)) %>% arrange(p.value)
+
+fwrite(os_by_mut_class_table, paste0(outdir, "os_by_mut_class.csv"))
+
+```
+
+## VUS ref
+
+```{r}
+
+os_by_mut_class2 <- mclapply(gene_type_list, os_by_var, variable = "mutation_class", ref = "vus", mc.cores = 6)
+names(os_by_mut_class2) <- mut_class_names
+
+os_by_mut_class2$KEAP1_LUAD
+
+```
+
+```{r}
+
+os_by_mut_class_table2 <- do.call(rbind, lapply(os_by_mut_class2, function(x) {return(x$res_table)}))
+os_by_mut_class_table2 <- os_by_mut_class_table2 %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_mut_class_table2 %>% filter(grepl("mutation_classdriver", term)) %>% arrange(p.value)
+
+fwrite(os_by_mut_class_table2, paste0(outdir, "os_by_mut_class_vus_ref.csv"))
+
+```
+
+## Combined (mutated)
+
+```{r}
+
+gene_type_list <- as.list(as.data.frame(t(pairs_to_test$mutation_class)))
+os_by_mut_class_alt <- mclapply(gene_type_list, os_by_var, variable = "mutation_class_combined", mc.cores = 6)
+
+```
+
+```{r}
+
+names(os_by_mut_class_alt) <- mut_class_names
+
+```
+
+```{r}
+
+os_by_mut_class_alt_table <- do.call(rbind, lapply(os_by_mut_class_alt, function(x) {return(x$res_table)}))
+os_by_mut_class_alt_table <- os_by_mut_class_alt_table %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_mut_class_alt_table
+
+fwrite(os_by_mut_class_alt_table, paste0(outdir, "os_by_mut_class_alt.csv"))
+
+```
+
+## 
+
+# OS by zygosity
+
+## WT ref
+
+```{r}
+
+gene_type_list <- as.list(as.data.frame(t(pairs_to_test$biallelic_label)))
+os_by_zyg <- mclapply(gene_type_list, os_by_var, variable = "biallelic_label", mc.cores = 6)
+
+```
+
+```{r}
+
+zyg_names <- unlist(lapply(gene_type_list, function(x) {paste0(x[1], "_", x[2])}))
+names(zyg_names) <- NA
+names(os_by_zyg) <- zyg_names
+
+```
+
+```{r}
+
+os_by_zyg_table <- do.call(rbind, lapply(os_by_zyg, function(x) {return(x$res_table)}))
+os_by_zyg_table <- os_by_zyg_table %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_zyg_table %>% filter(grepl("biallelic_labelbiallelic", term)) %>% arrange(p.value)
+
+fwrite(os_by_zyg_table, paste0(outdir, "os_by_zyg.csv"))
+
+```
+
+## monoallelic ref
+
+```{r}
+
+os_by_zyg2 <- mclapply(gene_type_list, os_by_var, variable = "biallelic_label", ref = "monoallelic", mc.cores = 6)
+names(os_by_zyg2) <- zyg_names
+
+```
+
+```{r}
+
+os_by_zyg_table2 <- do.call(rbind, lapply(os_by_zyg2, function(x) {return(x$res_table)}))
+os_by_zyg_table2 <- os_by_zyg_table2 %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_zyg_table2 %>% filter(grepl("biallelic_labelbiallelic", term)) %>% arrange(p.value)
+
+fwrite(os_by_zyg_table2, paste0(outdir, "os_by_zyg_monoallelic_ref.csv"))
+
+```
+
+## Combined (altered)
+
+```{r}
+
+gene_type_list <- as.list(as.data.frame(t(pairs_to_test$biallelic_label)))
+os_by_zyg_alt <- mclapply(gene_type_list, os_by_var, variable = "biallelic_label_combined", mc.cores = 6)
+
+```
+
+```{r}
+
+names(os_by_zyg_alt) <- zyg_names
+
+```
+
+```{r}
+
+os_by_zyg_alt_table <- do.call(rbind, lapply(os_by_zyg_alt, function(x) {return(x$res_table)}))
+os_by_zyg_alt_table <- os_by_zyg_alt_table %>% 
+  remove_rownames() %>%
+  group_by(gene, cancer_type) %>%
+  mutate(p.adj = p.adjust(p.value, "fdr", n = length(gene_type_list))) %>% ungroup() %>%
+  mutate(p.adj.signif.label = case_when(p.adj < 0.05 ~ "p.adj < 0.05",
+                                        p.value < 0.05 ~ "p < 0.05", 
+                                        TRUE ~ "ns"))
+
+os_by_zyg_alt_table
+
+fwrite(os_by_zyg_alt_table, paste0(outdir, "os_by_zyg_alt.csv"))
+
+```

@@ -1,0 +1,192 @@
+---
+title: "Zygosity & mutation class data prep"
+author: "Maria Perry"
+date: "2024-06-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(magrittr)
+library(data.table)
+library(dtplyr)
+
+```
+
+Input:
+
+-   gxb_cohort_drivers
+
+-   gxb_cohort_vus
+
+-   gxb_cohort_combined
+
+Output:
+
+-   zyg_mut_class
+
+    -   1 row per sample per gene containing:
+
+        1.  biallelic label (monoallelic, biallelic, WT)
+        2.  mutation class
+
+# Load
+
+```{r}
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+indir <- "data/input/"
+outdir <- "data/parsed/"
+
+gxb_cohort_drivers <- fread(paste0(indir, "gxb_cohort_drivers.csv"))
+gxb_cohort_vus <- fread(paste0(indir, "gxb_cohort_vus.csv"))
+gxb_cohort_combined <- fread(paste0(indir, "gxb_cohort_combined.csv"))
+
+fga_tmb_blacklist <- fread(paste0(indir, "high_mutational_cna_burden_tumors.50k.txt"))
+fga_tmb_blacklist <- fga_tmb_blacklist$x
+
+```
+
+# Mutation class
+
+We will bind the driver and VUS tables together and remove duplicates. Only *mutations* are considered as driver or WT (including compound muts). Other forms of biallelic inactivation (homdel, etc.), fusions, and indeterminate zygosity calls are excluded (NA). All others are considered WT.
+
+```{r}
+
+drivers_vus <- rbindlist(list(drivers = gxb_cohort_drivers %>% lazy_dt() %>%
+  # just annotate mut
+  mutate(mutation_class = ifelse(grepl("Mut|compound", zygosity_call, ignore.case = T), "driver", NA_character_)) %>%
+    as.data.table(),
+  vus = gxb_cohort_vus %>% lazy_dt() %>%
+  mutate(mutation_class = ifelse(grepl("Mut|compound", zygosity_call, ignore.case = T), "vus", NA_character_)) %>% as.data.table()), fill = T) %>% 
+  lazy_dt() %>%
+  distinct() %>%
+  mutate(mutation_class = case_when(zygosity_call %in% c("Biallelic - Homdel", 
+                                                         "Heterozygous (Fusion)",  "Indeterminate") ~ NA_character_,
+                                    is.na(mutation_class) ~ "wt",
+                                    TRUE ~ mutation_class)) %>%
+  as.data.table()
+
+drivers_vus <- drivers_vus %>%
+  lazy_dt() %>%
+  mutate(mutation_class_rank = as.numeric(factor(replace_na(mutation_class, "n/a"), levels = c("wt", "vus", "driver", "n/a"), ordered = T))) %>% # easier to take max with explicit NA level
+  group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>%
+  filter(mutation_class_rank == max(mutation_class_rank)) %>% ungroup() %>%
+  select(-mutation_class_rank) %>%
+  as.data.table()
+
+drivers_vus %>% xtabs(formula = ~ zygosity_call + mutation_class, addNA = T)
+
+drivers_vus <- drivers_vus %>% lazy_dt() %>% select(Tumor_Sample_Barcode, Hugo_Symbol, mutation_class) %>% unique() %>% as.data.table()
+
+```
+
+# Biallelic label
+
+*Only* for *KEAP1* in LUAD, we'll consider either drivers or VUS for the sake of zygosity based on initial analyses. For all other genes & cancer types, we use drivers only.
+
+Biallelic label is categorized based on the following criteria: 
+
+|                            |                              |
+|----------------------------|------------------------------|
+| **biallelic label**        | **zygosity_call**            |
+| **biallelic**              | Biallelic-compound           |
+| Biallelic-Homdel           |                              |
+| Biallelic-Mut+fusion       |                              |
+| Biallelic-Mut+LOH          |                              |
+| **monoallelic**            | Gain-of-mutant-Mut+copygain  |
+| Heterozygous(Mutation)     |                              |
+| **wt**                     | Heterozygous-LOH(gene-level) |
+| WT                         |                              |
+| Amplification-(gene-level) |                              |
+| Amplification-CNA          |                              |
+
+## KEAP1 LUAD: driver or VUS
+
+```{r}
+
+data_samples_50k <- fread(paste0(indir, "data_clinical_sample.oncokb.txt.gz")) # use this for cancer type/oncotree code -- manually curated from 50k
+
+gene_x_barcode_drivers_vus_keap1 <- gxb_cohort_drivers %>% 
+  left_join(data_samples_50k %>% select(Tumor_Sample_Barcode = SAMPLE_ID, ONCOTREE_CODE)) %>%
+  filter(Hugo_Symbol == "KEAP1" & ONCOTREE_CODE == "LUAD") %>% 
+  mutate(mutation_class = ifelse(grepl("Mut", zygosity_call), "driver", NA)) %>%
+  rbind(gxb_cohort_vus %>% 
+          left_join(data_samples_50k %>% select(Tumor_Sample_Barcode = SAMPLE_ID, ONCOTREE_CODE)) %>% 
+          filter(Hugo_Symbol == "KEAP1" & ONCOTREE_CODE == "LUAD")  %>% 
+  mutate(mutation_class = ifelse(grepl("Mut", zygosity_call), "vus", NA))) %>%
+  unique() %>%
+  arrange(Tumor_Sample_Barcode, Hugo_Symbol, mutation_class) %>%
+  mutate(biallelic_label = case_when(grepl("Biallelic", zygosity_call, ignore.case = T) ~ "biallelic",
+                                     grepl("Mut", zygosity_call, ignore.case = T) ~ "monoallelic",
+                                     zygosity_call %in% c("Indeterminate", "Heterozygous (Fusion)") ~ "n/a",
+                                     TRUE ~ "wt"),
+         biallelic_label = factor(biallelic_label, levels = c("n/a", "wt", "monoallelic", "biallelic"), ordered = T), 
+         mutation_class = factor(replace_na(mutation_class, "n/a"), levels = c("n/a", "vus", "driver"), ordered = T)) %>% # easier to take max with explicit NA level 
+  group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>% filter(biallelic_label == max(biallelic_label)) %>%
+  select(-c(is_oncogene, is_tsg, type)) %>%
+  mutate(mutation_class = fct_na_level_to_value(mutation_class, "n/a"),
+         biallelic_label = fct_na_level_to_value(biallelic_label, "n/a"))
+
+gene_x_barcode_drivers_vus_keap1
+
+gene_x_barcode_drivers_vus_keap1 %>% filter(Hugo_Symbol == "KEAP1") %>% xtabs(formula = ~ zygosity_call + biallelic_label, addNA = T)
+
+```
+
+## Drivers only (all other genes, types)
+
+```{r}
+
+gene_x_barcode_labeled <- gxb_cohort_drivers %>% lazy_dt() %>% 
+  mutate(mutation_class = ifelse(grepl("Mut", zygosity_call), "driver", NA_character_)) %>% 
+  mutate(biallelic = !is.na(zygosity_call) & grepl("Biallelic", zygosity_call, ignore.case = T),
+         biallelic_label = case_when(biallelic == T ~ "biallelic",
+                                     biallelic == F & grepl("Mut", zygosity_call, ignore.case = T) ~ "monoallelic",
+                                     zygosity_call %in% c("Indeterminate", "Heterozygous (Fusion)") ~ NA_character_,
+                                     TRUE ~ "wt"),
+         biallelic_label = factor(biallelic_label, levels = c("wt", "monoallelic", "biallelic"), ordered = T)) %>%
+  as.data.table()
+
+gene_x_barcode_labeled %>% xtabs(formula = ~ zygosity_call + biallelic_label)
+
+```
+
+## Combined zygosity table
+
+```{r}
+
+# combine
+gxb_zyg_labeled <- gene_x_barcode_drivers_vus_keap1 %>%
+  rbind(gene_x_barcode_labeled %>% 
+          left_join(data_samples_50k %>% select(Tumor_Sample_Barcode = SAMPLE_ID, ONCOTREE_CODE)) %>%
+          filter(!(Hugo_Symbol == "KEAP1" & ONCOTREE_CODE == "LUAD")) %>% select(-c(is_oncogene, is_tsg, type))) 
+
+gxb_zyg_labeled <- gxb_zyg_labeled %>%
+  lazy_dt() %>%
+  select(Tumor_Sample_Barcode, Hugo_Symbol, biallelic_label) %>% unique() %>% as.data.table()
+
+```
+
+# Combined zyg & mutation class data
+
+```{r}
+
+tsgs <- gxb_cohort_combined %>% lazy_dt() %>% filter(is_tsg == T & is_oncogene == F) %>% select(Hugo_Symbol) %>% unique() %>%
+  as.data.table() %>% pull(Hugo_Symbol)
+
+zyg_mut_class <- gxb_zyg_labeled %>%
+  full_join(drivers_vus) %>%
+  filter(Hugo_Symbol %in% tsgs) %>%
+  filter(!Tumor_Sample_Barcode %in% fga_tmb_blacklist)
+  
+
+n_distinct(zyg_mut_class$Hugo_Symbol)
+
+fwrite(zyg_mut_class, file = paste0(outdir, "zyg_mut_class.csv"))
+
+```
